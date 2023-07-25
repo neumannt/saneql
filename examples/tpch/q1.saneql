@@ -1,0 +1,13 @@
+lineitem
+.filter(l_shipdate <= '1998-12-01'::date - '90 days'::interval)
+.groupby({l_returnflag, l_linestatus},
+   {sum_qty:=sum(l_quantity),
+      sum_base_price:=sum(l_extendedprice),
+      sum_disc_price:=sum(l_extendedprice * (1 - l_discount)),
+      sum_charge:=sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)),
+      avg_qty:=avg(l_quantity),
+      avg_price:=avg(l_extendedprice),
+      avg_disc:=avg(l_discount),
+      count_order:=count()
+   })
+.orderby({l_returnflag, l_linestatus})

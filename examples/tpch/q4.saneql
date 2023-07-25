@@ -1,0 +1,5 @@
+orders
+.filter(o_orderdate >= '1993-07-01'::date && o_orderdate < '1993-07-01'::date + '3 month'::interval)
+.join(lineitem.filter(l_commitdate < l_receiptdate), l_orderkey = o_orderkey, type:=exists)
+.groupby({o_orderpriority}, {order_count:=count()})
+.orderby(o_orderpriority)

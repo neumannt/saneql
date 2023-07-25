@@ -1,0 +1,15 @@
+Access : base part;
+BinaryExpression :: Plus Minus Mul Div Mod Pow Less Greater Equals NotEquals LessOrEqual GreaterOrEqual And Or : left right;
+Call : func args;
+Cast : value type;
+DefineFunction : name args body;
+FuncArg :: Flat List : name value;
+FuncArgNamed :: Flat List : name value;
+LetArg : name type value;
+LetEntry : name args body;
+List : head tail;
+Literal :: Integer Float String True False Null : arg;
+QueryBody : lets body;
+Type :: Simple SubTypes Parameter : name arg;
+TypeArg : name value;
+UnaryExpression :: Plus Minus Not : value;

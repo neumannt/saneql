@@ -1,0 +1,379 @@
+%skeleton "lalr1.cc"
+%require "3.0"
+%define api.namespace {saneql::saneqlparser}
+%define api.value.type {saneql::ast::AST*}
+%locations
+%define parse.error verbose
+
+%lex-param { saneql::ASTContainer& container }
+%lex-param { saneql::SaneQLLexer& lexer }
+%parse-param { saneql::ASTContainer& container }
+%parse-param { saneql::SaneQLLexer& lexer }
+
+%code requires{
+#include "parser/AST.hpp"
+#include "parser/SaneQLLexer.hpp"
+#include "parser/SaneQLParser.hpp"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
+// LCOV_EXCL_START
+}
+%code{
+static int yylex(saneql::saneqlparser::parser::semantic_type* yylval,saneql::saneqlparser::parser::location_type* yyloc,saneql::ASTContainer& container,saneql::SaneQLLexer& lexer);
+}
+
+
+// Lexer tokens
+%token EndOfFile 0 "end-of-file"
+%token Error
+%token IDENT "identifier"
+%token FCONST "floatliteral"
+%token SCONST "stringliteral"
+%token BCONST "bitstringliteral"
+%token XCONST "hexstringliteral"
+%token Op "<operator>"
+%token ICONST "intliteral"
+%token PARAM "'$?'"
+%token TYPECAST "'::'"
+%token DOT_DOT "'..'"
+%token COLON_EQUALS "':='"
+%token EQUALS_GREATER "'=>'"
+%token LESS_EQUALS "'<='"
+%token GREATER_EQUALS "'>='"
+%token NOT_EQUALS "'<>'"
+%token MODE_EXPRESSION
+%token MODE_TYPE
+%token AND "'&&'"
+%token OR "'||'"
+%token NOT "'!'"
+
+// Keywords
+%token LET "let"
+%token DEFUN "defun"
+%token NULL_P "null"
+%token TRUE_P "true"
+%token FALSE_P "false"
+%token TABLE "table"
+
+// Precedence
+%left		OR
+%left		AND
+%right		NOT
+%nonassoc	IS
+%nonassoc	'<' '>' '=' LESS_EQUALS GREATER_EQUALS NOT_EQUALS
+%nonassoc	ESCAPE
+%left		POSTFIXOP
+%nonassoc	IDENT NULL_P
+%left		Op OPERATOR
+%left		'+' '-'
+%left		'*' '/' '%'
+%left		'^'
+%right		UMINUS
+%left		'[' ']'
+%left		'(' ')'
+%left		TYPECAST
+%left		'.'
+
+%%
+
+//---------------------------------------------------------------------------
+// Query
+
+
+Query:
+   DefineFunction { raw container.setResult($1); }
+ | QueryBody { raw container.setResult($1); }
+;
+
+DefineFunction:
+   DEFUN Identifier '(' ')' QueryBody { ast DefineFunction name=2 body=5 }
+ | DEFUN Identifier '(' LetArgsList ')' QueryBody { ast DefineFunction name=2 args=4 body=6 }
+;
+
+QueryBody:
+   LetList Expression { ast QueryBody lets=1 body=2 }
+;
+
+LetList:
+   LetList LetEntry { list List head=1 tail=2 }
+ | %empty { null }
+;
+
+LetEntry:
+   LET Identifier LetArgs COLON_EQUALS Expression ',' { ast LetEntry name=2 args=3 body=5 }
+;
+
+LetArgs:
+   '(' LetArgsList ')' { return 2 }
+ | %empty { null }
+;
+
+LetArgsList:
+   LetArgsList ',' LetArg { list List head=1 tail=3 }
+ | LetArg { list List head=1 }
+;
+
+LetArg:
+   Identifier { ast LetArg name=1 }
+ | Identifier Type { ast LetArg name=1 type=2 }
+ | Identifier COLON_EQUALS Expression { ast LetArg name=1 value=3 }
+ | Identifier Type COLON_EQUALS Expression { ast LetArg name=1 type=2 value=4 }
+;
+
+Identifier:
+   IDENT
+ | Softkeywords
+;
+
+Softkeywords:
+   TABLE
+;
+
+//---------------------------------------------------------------------------
+// types
+
+Type:
+   Identifier { ast Type Simple name=1 }
+ | Identifier '{' TypeList '}' { ast Type SubTypes name=1 arg=3 }
+ | Identifier '{' TypeArgList '}' { ast Type Parameter name=1 arg=3 }
+;
+
+TypeList:
+   Type { list List head=1 }
+ | TypeList ',' Type { list List head=1 tail=3 }
+;
+
+TypeArgList:
+   TypeArg { list List head=1 }
+ | TypeArgList ',' TypeArg { list List head=1 tail=3 }
+;
+
+TypeArg:
+   Iconst { ast TypeArg value=1 }
+ | Identifier COLON_EQUALS Iconst { ast TypeArg name=1 value=3 }
+;
+
+Iconst:
+   ICONST
+;
+
+
+//---------------------------------------------------------------------------
+// expressions
+
+Expression:
+   a_expr
+;
+
+a_expr:
+   Identifier { return 1 }
+ | AexprConst { return 1 }
+ | '(' a_expr ')' { return 2 }
+ | a_expr TYPECAST Type { ast Cast value=1 type=3 }
+ | '+' a_expr %prec UMINUS { ast UnaryExpression Plus value=2 }
+ | '-' a_expr %prec UMINUS { ast UnaryExpression Minus value=2 }
+ | a_expr '+' a_expr { ast BinaryExpression Plus left=1 right=3 }
+ | a_expr '-' a_expr { ast BinaryExpression Minus left=1 right=3 }
+ | a_expr '*' a_expr { ast BinaryExpression Mul left=1 right=3 }
+ | a_expr '/' a_expr { ast BinaryExpression Div left=1 right=3 }
+ | a_expr '%' a_expr { ast BinaryExpression Mod left=1 right=3 }
+ | a_expr '^' a_expr { ast BinaryExpression Pow left=1 right=3 }
+ | a_expr '<' a_expr { ast BinaryExpression Less left=1 right=3 }
+ | a_expr '>' a_expr { ast BinaryExpression Greater left=1 right=3 }
+ | a_expr '=' a_expr { ast BinaryExpression Equals left=1 right=3 }
+ | a_expr LESS_EQUALS a_expr { ast BinaryExpression LessOrEqual left=1 right=3 }
+ | a_expr GREATER_EQUALS a_expr { ast BinaryExpression GreaterOrEqual left=1 right=3 }
+ | a_expr NOT_EQUALS a_expr { ast BinaryExpression NotEquals left=1 right=3 }
+ | a_expr AND a_expr { ast BinaryExpression And left=1 right=3 }
+ | a_expr OR a_expr { ast BinaryExpression Or left=1 right=3 }
+ | NOT a_expr { ast UnaryExpression Not value=2 }
+ | a_expr '.' Identifier { ast Access base=1 part=3 }
+ | a_expr '(' ')' { ast Call func=1 }
+ | a_expr '(' FuncArgs ')' { ast Call func=1 args=3 }
+;
+
+AexprConst:
+   Iconst { ast Literal Integer arg=1 }
+ | FCONST { ast Literal Float arg=1 }
+ | Sconst { ast Literal String arg=1 }
+ | TRUE_P { ast Literal True }
+ | FALSE_P { ast Literal False }
+ | NULL_P { ast Literal Null }
+;
+
+Sconst:
+   SCONST
+;
+
+FuncArgs:
+   FuncArgs ',' FuncArg { list List head=1 tail=3 }
+ | FuncArg { list List head=1 }
+;
+
+FuncArg:
+   Identifier COLON_EQUALS Expression { ast FuncArg Flat name=1 value=3 }
+ | Identifier COLON_EQUALS '{' FuncArgList '}' { ast FuncArg List name=1 value=3 }
+ | Expression { ast FuncArg Flat value=1 }
+ | '{' FuncArgList '}' { ast FuncArg List value=2 }
+;
+
+FuncArgList:
+   FuncArgListNe
+ | %empty { null }
+;
+
+FuncArgListNe:
+   FuncArgListNe ',' FuncArgNamed { list List head=1 tail=3 }
+ | FuncArgNamed { list List head=1 }
+;
+
+FuncArgNamed:
+   Expression { ast FuncArgNamed Flat value=1 }
+ | Identifier COLON_EQUALS Expression { ast FuncArgNamed Flat name=1 value=3 }
+ | '{' FuncArgList '}' { ast FuncArgNamed List value=2 }
+ | Identifier COLON_EQUALS '{' FuncArgList '}' { ast FuncArgNamed List name=1 value=4 }
+;
+
+%%
+
+namespace saneql { namespace saneqlparser {
+
+void parser::error(const location_type&,const std::string&) {
+   // unreachable
+}
+
+class reportingparser final : public parser {
+
+  public:
+  reportingparser(saneql::ASTContainer& container,saneql::SaneQLLexer& lexer) : parser(container,lexer) {}
+
+#define N_TOKENS_VAR YYNTOKENS
+  std::string yysyntax_error_ (const context& yyctx) const override
+  {
+     auto yystate = yyctx.yyparser_.yystack_[0].state;
+     auto& yyla = yyctx.lookahead();
+     const char* gotSymbol=nullptr;
+     std::vector<const char*> expectedSymbols;
+#define ERROR_TOKEN_VAR symbol_kind::S_YYerror
+     if (!yyla.empty ()) {
+        const int firstKeyword = yytranslate_(saneqlparser::parser::token::LET);
+        const int identifier = yytranslate_(saneqlparser::parser::token::IDENT);
+        int yytoken = yyla.type_get ();
+        gotSymbol = yytname_[yytoken];
+        if ((*gotSymbol=='"')&&(yytoken<firstKeyword))
+           ++gotSymbol;
+
+        bool expectedIdent=false;
+        int yyn = yypact_[yystate];
+        if (!yy_pact_value_is_default_ (yyn))
+          {
+            int yyxbegin = yyn < 0 ? -yyn : 0;
+            int yychecklim = yylast_ - yyn + 1;
+            int yyxend = yychecklim < N_TOKENS_VAR ? yychecklim : N_TOKENS_VAR;
+            for (int yyx = yyxbegin; yyx < yyxend; ++yyx)
+              if (yycheck_[yyx + yyn] == yyx && yyx != ERROR_TOKEN_VAR
+                  && !yy_table_value_is_error_ (yytable_[yyx + yyn]))
+                {
+                  if (yyx==identifier) expectedIdent=true;
+                }
+          }
+        if (!yy_pact_value_is_default_ (yyn))
+          {
+            int yyxbegin = yyn < 0 ? -yyn : 0;
+            int yychecklim = yylast_ - yyn + 1;
+            int yyxend = yychecklim < N_TOKENS_VAR ? yychecklim : N_TOKENS_VAR;
+            for (int yyx = yyxbegin; yyx < yyxend; ++yyx)
+              if (yycheck_[yyx + yyn] == yyx && yyx != ERROR_TOKEN_VAR
+                  && !yy_table_value_is_error_ (yytable_[yyx + yyn]))
+                {
+                   if ((yyx<firstKeyword)||(!expectedIdent)) {
+                      const char* s=yytname_[yyx];
+                      if ((*s=='"')&&(yyx<firstKeyword))
+                         ++s;
+                      expectedSymbols.push_back(s);
+                   }
+                }
+          }
+      }
+#undef ERROR_TOKEN_VAR
+#undef N_TOKENS_VAR
+
+      lexer.reportSyntaxError(yyla.location.begin.column,gotSymbol,expectedSymbols);
+      return {};
+  }
+};
+
+}}
+
+
+// All non-keyword SaneQLLexer tokens and their corresponding bison tokens
+#define SQLLEXER_TOKENS(A,B) \
+   A(Eof,EndOfFile) A(Error,Error) B(Asterisk,'*') B(Circumflex,'^') A(ClientCommand,Error) B(Colon,':') A(ColonColon,TYPECAST) A(ColonEquals,COLON_EQUALS) B(Comma,',') \
+   B(Dot,'.') A(DotDot,DOT_DOT) B(Equals,'=') A(EqualsGreater,EQUALS_GREATER) A(Float,FCONST) B(Greater,'>') A(GreaterEquals,GREATER_EQUALS) A(Identifier,IDENT) \
+   A(Integer,ICONST) B(LCurly,'{') B(LParen,'(') B(LSquare,'[') B(Less,'<') A(LessEquals,LESS_EQUALS) B(Minus,'-') A(NotEquals,NOT_EQUALS) A(Operator,Op) B(Percent,'%') \
+   A(Parameter,PARAM) B(Plus,'+') B(RCurly,'}') B(RParen,')') B(RSquare,']') B(SemiColon,';') B(Solidus,'/') A(String,SCONST) A(UnterminatedLiteral,Error) A(UnterminatedMultilineComment,Error)
+
+// The mapping table from SaneQLLexer tokens to bison tokens
+static constexpr saneql::saneqlparser::parser::token::yytokentype tokenTable[]={
+#define A(X,Y) saneql::saneqlparser::parser::token::Y,
+#define B(X,Y) static_cast<saneql::saneqlparser::parser::token::yytokentype>(Y),
+SQLLEXER_TOKENS(A,B)
+#undef A
+#undef B
+
+#define KEYWORD(A,B,C) saneql::saneqlparser::parser::token::B,
+#include "parser/Keywords.hpp"
+#undef KEYWORD
+};
+
+// LCOV_EXCL_STOP
+
+// Verify that the mapping table is correct
+#define A(X,Y) static_assert(tokenTable[static_cast<unsigned>(saneql::SaneQLLexer::Token::X)]==saneql::saneqlparser::parser::token::Y,"incorrect token mapping");
+#define B(X,Y) static_assert(tokenTable[static_cast<unsigned>(saneql::SaneQLLexer::Token::X)]==static_cast<saneql::saneqlparser::parser::token::yytokentype>(Y),"incorrect token mapping");
+SQLLEXER_TOKENS(A,B)
+#undef A
+#undef B
+
+#define KEYWORD(A,B,C) static_assert(tokenTable[static_cast<unsigned>(saneql::SaneQLLexer::Token::B)]==saneql::saneqlparser::parser::token::B,"incorrect token mapping");
+#include "parser/Keywords.hpp"
+#undef KEYWORD
+
+// Lexer interface
+static int yylex(saneql::saneqlparser::parser::semantic_type* yylval,saneql::saneqlparser::parser::location_type* yyloc,saneql::ASTContainer& container,saneql::SaneQLLexer& lexer)
+{
+   // Get the next token
+   saneql::SaneQLLexer::TokenInfo info;
+   auto token=lexer.next(info);
+
+   // Construct a token node
+   *yylval=new (container.allocateRaw(sizeof(saneql::ast::Token))) saneql::ast::Token(info);
+
+   // Construct a location
+#define POSITION_COUNTER_TYPE saneql::saneqlparser::position::counter_type
+   *yyloc=saneql::saneqlparser::parser::location_type{saneql::saneqlparser::position{nullptr,1,static_cast<POSITION_COUNTER_TYPE>(lexer.getColumnId(info.content.begin()))},saneql::saneqlparser::position{nullptr,1,static_cast<POSITION_COUNTER_TYPE>(lexer.getColumnId(info.content.end()))}};
+#undef POSITION_COUNTER_TYPE
+
+   // And return the mapped token
+   return tokenTable[static_cast<unsigned>(token)];
+}
+
+namespace saneql {
+
+ast::AST* SaneQLParser::parse(ASTContainer& container,std::string_view input)
+{
+   SaneQLLexer lexer(input);
+   saneqlparser::reportingparser parser(container,lexer);
+   if (parser.parse()!=0) return nullptr;
+   return container.getResult<ast::AST>();
+}
+
+}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

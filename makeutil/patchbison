@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+bison="$1"
+srcfile="$2"
+dstfile="$3"
+"$bison" -o$dstfile $srcfile -Wcounterexamples
+sed 's/private:/public:/' $dstfile > $dstfile.tmp
+mv $dstfile.tmp $dstfile
