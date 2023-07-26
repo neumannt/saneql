@@ -856,7 +856,12 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          auto order = unifyCollate(base->getOrdering(), arg.getOrdering());
          return ExpressionResult(make_unique<algebra::ComparisonExpression>(move(base->scalar()), move(arg.scalar()), algebra::ComparisonExpression::Is, order.getCollate()), OrderingInfo::defaultOrder());
       }
-      case Builtin::Like: reportError("like not implemented yet");
+      case Builtin::Like: {
+         auto arg = scalarArgument(scope, name, sig->arguments[0].name, args[0]);
+         if ((!isString(base->scalar()->getType())) || (!isString(arg.scalar()->getType()))) reportError("'like' requires string arguments");
+         auto order = unifyCollate(base->getOrdering(), arg.getOrdering());
+         return ExpressionResult(make_unique<algebra::ComparisonExpression>(move(base->scalar()), move(arg.scalar()), algebra::ComparisonExpression::Like, order.getCollate()), OrderingInfo::defaultOrder());
+      }
       case Builtin::Filter: {
          auto cond = scalarArgument(base->getBinding(), name, sig->arguments[0].name, args[0]);
          if (cond.scalar()->getType().getType() != Type::Bool) reportError("'filter' requires a boolean filter condition");

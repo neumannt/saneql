@@ -6,8 +6,8 @@ let min_supplycost_for_part(p_partkey) :=
    .join(region.filter(r.name='EUROPE'), n_regionkey=r_regionkey).aggregate(min(ps_supplycost)),
 part
 .filter(condition:=p_size = 15 && p_type.like('%BRASS'))
-.join(supplier, s_suppkey = ps_suppkey)
 .join(partsupp, p_partkey = ps_partkey)
+.join(supplier, s_suppkey = ps_suppkey)
 .join(nation, s_nationkey = n_nationkey)
 .join(region.filter(r_name='EUROPE'), n_regionkey=r_regionkey)
 .filter(ps_supplycost = min_supplycost_for_part(p_partkey))

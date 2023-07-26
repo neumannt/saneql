@@ -75,6 +75,7 @@ void ComparisonExpression::generate(SQLWriter& out)
       case Mode::LessOrEqual: out.write(" <= "); break;
       case Mode::Greater: out.write(" > "); break;
       case Mode::GreaterOrEqual: out.write(" >= "); break;
+      case Mode::Like: out.write(" like "); break;
    }
    right->generateOperand(out);
 }

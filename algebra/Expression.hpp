@@ -100,7 +100,8 @@ class ComparisonExpression : public Expression {
       Less,
       LessOrEqual,
       Greater,
-      GreaterOrEqual
+      GreaterOrEqual,
+      Like
    };
    /// The input
    std::unique_ptr<Expression> left, right;
