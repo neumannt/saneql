@@ -135,7 +135,7 @@ static string getInternalName(string_view name) {
 }
 }
 //---------------------------------------------------------------------------
-Collate OrderingInfo::lookupCollate(const std::string& name)
+Collate OrderingInfo::lookupCollate(const string& name)
 // Lookup a collate. Throws if not found
 {
    throw runtime_error("unknown collate '" + name + "'");
@@ -164,7 +164,7 @@ class SemanticAnalysis::BindingInfo::GroupByScope {
 //---------------------------------------------------------------------------
 const algebra::IU* const SemanticAnalysis::BindingInfo::ambiguousIU = reinterpret_cast<const algebra::IU*>(1);
 //---------------------------------------------------------------------------
-SemanticAnalysis::BindingInfo::Scope* SemanticAnalysis::BindingInfo::addScope(const std::string& name)
+SemanticAnalysis::BindingInfo::Scope* SemanticAnalysis::BindingInfo::addScope(const string& name)
 // Add a new scope, mark it as ambiguous if it already exists
 {
    auto iter = scopes.find(name);
@@ -176,7 +176,7 @@ SemanticAnalysis::BindingInfo::Scope* SemanticAnalysis::BindingInfo::addScope(co
    return &(scopes[name]);
 }
 //---------------------------------------------------------------------------
-void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const std::string& column, const algebra::IU* iu)
+void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const string& column, const algebra::IU* iu)
 // Add a binding
 {
    if (scope) {
@@ -194,7 +194,7 @@ void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const std::string& 
    columns.push_back({column, iu});
 }
 //---------------------------------------------------------------------------
-const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const std::string& name) const
+const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const string& name) const
 // Lookup a column
 {
    auto iter = columnLookup.find(name);
@@ -203,7 +203,7 @@ const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const std::string& name
    return nullptr;
 }
 //---------------------------------------------------------------------------
-const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const std::string& binding, const std::string& name) const
+const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const string& binding, const string& name) const
 // Lookup a column
 {
    auto iter = scopes.find(binding);
@@ -214,6 +214,20 @@ const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const std::string& bind
          return iter2->second;
    }
    return nullptr;
+}
+//---------------------------------------------------------------------------
+void SemanticAnalysis::BindingInfo::registerArgument(const string& name, const ast::AST* ast, const BindingInfo* scope)
+// Register an argument
+{
+   arguments[name] = {ast, scope};
+}
+//---------------------------------------------------------------------------
+pair<const ast::AST*, const SemanticAnalysis::BindingInfo*> SemanticAnalysis::BindingInfo::lookupArgument(const string& name) const
+// Check for an argument
+{
+   if (auto iter = arguments.find(name); iter != arguments.end())
+      return iter->second;
+   return {nullptr, nullptr};
 }
 //---------------------------------------------------------------------------
 void SemanticAnalysis::BindingInfo::join(const BindingInfo& other)
@@ -434,7 +448,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeUnaryExpression(cons
    __builtin_unreachable();
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
 // Analyze a groupby computation
 {
    // Analyze the join type
@@ -493,7 +507,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(ExpressionResul
    return ExpressionResult(make_unique<algebra::Join>(move(input.table()), move(other.table()), move(cond.scalar()), joinType), move(resultBinding));
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeGroupBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeGroupBy(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
 // Analyze a groupby computation
 {
    // Analyze the groups
@@ -562,7 +576,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeGroupBy(ExpressionRe
    return ExpressionResult(move(tree), move(resultBinding));
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args, bool project)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult& input, const vector<const ast::FuncArg*>& args, bool project)
 // Analyze a map computation
 {
    string name = project ? "project" : "map";
@@ -617,7 +631,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult
    return ExpressionResult(move(tree), move(resultBinding));
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
 // Analyze a groupby computation
 {
    // Analyze the order
@@ -638,8 +652,8 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionRe
       if (l.getSubType() != ast::Literal::SubType::Integer) reportError("'" + string(name) + "' requires an integer constant");
       string v = extractString(l.arg);
       uint64_t result;
-      auto [ptr, ec] = std::from_chars(v.data(), v.data() + v.size(), result);
-      if (ec != std::errc()) reportError("'" + string(name) + "' requires an integer constant");
+      auto [ptr, ec] = from_chars(v.data(), v.data() + v.size(), result);
+      if (ec != errc()) reportError("'" + string(name) + "' requires an integer constant");
       return result;
    };
 
@@ -775,6 +789,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
    optional<ExpressionResult> base;
    string name;
    const Functions::Signature* sig = nullptr;
+   optional<unsigned> letSlot;
    if (call.func->getType() == ast::AST::Type::Access) {
       auto& a = ast::Access::ref(call.func);
       base.emplace(analyzeExpression(scope, a.base));
@@ -798,12 +813,20 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
    } else {
       if (call.func->getType() != ast::AST::Type::Token) reportError("invalid function name");
       name = extractString(call.func);
-      sig = Functions::freeFunctions.lookup(name);
+      if (letLookup.contains(name)) {
+         if (auto slot = letLookup.find(name)->second; slot < letScopeLimit) {
+            letSlot = slot;
+            sig = &lets[slot].signature;
+         }
+      }
+      if (!sig) {
+         sig = Functions::freeFunctions.lookup(name);
+      }
       if (!sig) reportError("function '" + name + "' not found");
    }
 
    // Assign arguments to positions
-   std::vector<const ast::FuncArg*> args;
+   vector<const ast::FuncArg*> args;
    bool hadNamed = false;
    for (auto& a : TypedList<ast::FuncArg>(call.args)) {
       // Check for names arguments
@@ -827,6 +850,21 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
    if (!hadNamed) args.resize(sig->arguments.size(), nullptr);
    for (unsigned index = 0, limit = sig->arguments.size(); index != limit; ++index)
       if ((!args[index]) && (!sig->arguments[index].hasDefault)) reportError("parameter '" + sig->arguments[index].name + "' missing in call to '" + name + "'");
+
+   // Handle function calls
+   if (letSlot.has_value()) {
+      SetLetScopeLimit setLetScopeLimit(this, *letSlot);
+      auto& let = lets[*letSlot];
+      BindingInfo callScope;
+      for (unsigned index = 0, limit = sig->arguments.size(); index != limit; ++index) {
+         auto val = args[index] ? args[index]->value : let.defaultValues[index];
+         bool isExpression = sig->arguments[index].type.category == Functions::TypeCategory::Expression;
+         callScope.registerArgument(sig->arguments[index].name, val, isExpression ? nullptr : &scope);
+      }
+      auto res = analyzeExpression(callScope, let.body);
+      if (res.isTable()) res.accessBinding().parentScope = nullptr;
+      return res;
+   }
 
    // Logic for handling aggregates
    auto handleAggregate = [&](algebra::GroupBy::Op op) {
@@ -958,12 +996,20 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingI
       return ExpressionResult(make_unique<algebra::IURef>(iu), OrderingInfo::defaultOrder());
    }
 
+   // An argument
+   for (auto iter = &scope; iter; iter = iter->parentScope) {
+      if (auto arg = iter->lookupArgument(name); arg.first) {
+         return analyzeExpression(arg.second ? *arg.second : scope, arg.first);
+      }
+   }
+
    // Table scan?
    auto table = schema.lookupTable(name);
    if (!table) reportError("unknown table '" + name + "'");
 
    auto bindingName = getInternalName(name);
    BindingInfo binding;
+   binding.parentScope = &scope;
    auto resultScope = binding.addScope(bindingName);
    vector<algebra::TableScan::Column> columns;
    for (auto& c : table->columns) {
@@ -1021,7 +1067,7 @@ void SemanticAnalysis::analyzeLet(const ast::LetEntry& ast)
    // Register the let
    auto name = extractSymbol(ast.name);
    if (letLookup.contains(name)) reportError("duplicate let '" + name + "'");
-   lets.emplace_back(move(args), move(defaultValues));
+   lets.emplace_back(Functions::Signature({}, move(args)), move(defaultValues), ast.body);
    letLookup[name] = lets.size() - 1;
 }
 //---------------------------------------------------------------------------

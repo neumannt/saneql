@@ -99,8 +99,14 @@ class SemanticAnalysis {
       std::unordered_map<std::string, const algebra::IU*> columnLookup;
       /// Scoped columns
       std::unordered_map<std::string, Scope> scopes;
+      /// The arguments
+      std::unordered_map<std::string, std::pair<const ast::AST*, const BindingInfo*>> arguments;
+      /// The parent scope for function calls (if any)
+      const BindingInfo* parentScope = nullptr;
       /// The group by scope (if any)
       GroupByScope* gbs = nullptr;
+
+      friend class SemanticAnalysis;
 
       public:
       /// Marker for ambiguous IUs
@@ -117,6 +123,11 @@ class SemanticAnalysis {
       const algebra::IU* lookup(const std::string& name) const;
       /// Lookup a column
       const algebra::IU* lookup(const std::string& binding, const std::string& name) const;
+
+      /// Register an argument
+      void registerArgument(const std::string& name, const ast::AST* ast, const BindingInfo* scope);
+      /// Check for an argument
+      std::pair<const ast::AST*, const BindingInfo*> lookupArgument(const std::string& name) const;
 
       /// Merge after a join
       void join(const BindingInfo& other);
@@ -192,15 +203,29 @@ class SemanticAnalysis {
    /// Information about a let
    struct LetInfo {
       /// The signature (if any)
-      std::vector<Functions::Argument> signature;
+      Functions::Signature signature;
       /// The default values (if any)
       std::vector<const ast::AST*> defaultValues;
+      /// The body of the let
+      const ast::AST* body;
    };
 
    /// All lets
    std::vector<LetInfo> lets;
    /// Lookup of lets by name
    std::unordered_map<std::string, unsigned> letLookup;
+   /// Visibility limit for lets
+   unsigned letScopeLimit = ~0u;
+
+   /// Change the let scope limit
+   class SetLetScopeLimit {
+      SemanticAnalysis* semana;
+      unsigned oldLimit;
+
+      public:
+      SetLetScopeLimit(SemanticAnalysis* semana, unsigned newLimit) : semana(semana), oldLimit(semana->letScopeLimit) { semana->letScopeLimit = newLimit; }
+      ~SetLetScopeLimit() { semana->letScopeLimit = oldLimit; }
+   };
 
    /// Report an error
    [[noreturn]] void reportError(std::string message);
