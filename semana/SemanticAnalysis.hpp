@@ -2,6 +2,7 @@
 #define H_saneql_SemanticAnalysis
 //---------------------------------------------------------------------------
 #include "infra/Schema.hpp"
+#include "semana/Functions.hpp"
 #include <memory>
 #include <unordered_map>
 #include <variant>
@@ -19,6 +20,7 @@ class BinaryExpression;
 class Call;
 class Cast;
 class FuncArg;
+class LetEntry;
 class Literal;
 class Type;
 class UnaryExpression;
@@ -187,6 +189,18 @@ class SemanticAnalysis {
       /// Get the contained basic type
       Type getBasicType() const { return std::get<0>(content); }
    };
+   /// Information about a let
+   struct LetInfo {
+      /// The signature (if any)
+      std::vector<Functions::Argument> signature;
+      /// The default values (if any)
+      std::vector<const ast::AST*> defaultValues;
+   };
+
+   /// All lets
+   std::vector<LetInfo> lets;
+   /// Lookup of lets by name
+   std::unordered_map<std::string, unsigned> letLookup;
 
    /// Report an error
    [[noreturn]] void reportError(std::string message);
@@ -242,6 +256,8 @@ class SemanticAnalysis {
    ExpressionResult analyzeToken(const BindingInfo& scope, const ast::AST* exp);
    /// Analyze an expression
    ExpressionResult analyzeExpression(const BindingInfo& scope, const ast::AST* exp);
+   /// Analyze a let construction
+   void analyzeLet(const ast::LetEntry& ast);
 
    public:
    /// Constructor

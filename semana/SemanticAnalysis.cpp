@@ -7,6 +7,7 @@
 #include <charconv>
 #include <optional>
 #include <stdexcept>
+#include <unordered_set>
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -284,7 +285,10 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeQuery(const ast::AST
    if (query->getType() == AST::Type::DefineFunction) reportError("defun not implemented yet");
    auto& qb = ast::QueryBody::ref(query);
 
-   if (qb.lets) reportError("let not implemented yet"); // TODO
+   if (qb.lets) {
+      for (auto& l : TypedList<ast::LetEntry>(qb.lets))
+         analyzeLet(l);
+   }
 
    BindingInfo emptyScope;
    return analyzeExpression(emptyScope, qb.body);
@@ -977,6 +981,43 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeExpression(const Bin
       case ast::AST::Type::UnaryExpression: return analyzeUnaryExpression(scope, ast::UnaryExpression::ref(exp));
       default: invalidAST();
    }
+}
+//---------------------------------------------------------------------------
+void SemanticAnalysis::analyzeLet(const ast::LetEntry& ast)
+// Analyze a let construction
+{
+   // Collect the arguments
+   vector<Functions::Argument> args;
+   vector<const ast::AST*> defaultValues;
+   if (ast.args) {
+      unordered_set<string> argNames;
+      for (auto& a : TypedList<ast::LetArg>(ast.args)) {
+         auto name = extractSymbol(a.name);
+         if (argNames.contains(name)) reportError("duplicate function argument '" + name + "'");
+         argNames.insert(name);
+         Functions::ArgumentType argType = Functions::TypeCategory::Scalar;
+         if (a.type) {
+            auto& at = ast::Type::ref(a.type);
+            if (at.getSubType() != ast::Type::SubType::Simple) reportError("complex argument types not implemented yet");
+            auto tn = extractSymbol(at.name);
+            if (tn == "table") {
+               argType = Functions::TypeCategory::Table;
+            } else if (tn == "expression") {
+               argType = Functions::TypeCategory::Expression;
+            } else {
+               reportError("unsupported argument type '" + tn + "'");
+            }
+         }
+         args.emplace_back(name, argType, !!a.value);
+         defaultValues.push_back(a.value);
+      }
+   }
+
+   // Register the let
+   auto name = extractSymbol(ast.name);
+   if (letLookup.contains(name)) reportError("duplicate let '" + name + "'");
+   lets.emplace_back(move(args), move(defaultValues));
+   letLookup[name] = lets.size() - 1;
 }
 //---------------------------------------------------------------------------
 }
