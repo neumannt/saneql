@@ -943,6 +943,13 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min);
       case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max);
       case Builtin::Table: return analyzeTableConstruction(scope, args[0]);
+      case Builtin::As: {
+         auto& b = base->accessBinding();
+         auto newName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         b.scopes.clear();
+         b.scopes[newName].columns = b.columnLookup;
+         return move(*base);
+      }
    }
 
    reportError("call not implemented yet");

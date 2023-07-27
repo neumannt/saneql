@@ -28,6 +28,7 @@ class Functions {
       OrderBy,
       Map,
       Project,
+      As,
       AggCount,
       AggSum,
       AggAvg,

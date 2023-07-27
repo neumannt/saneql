@@ -42,6 +42,7 @@ const Functions Functions::table(nullptr,
                                     {"orderby", {Builtin::OrderBy, {{"expressions", TypeCategory::ExpressionList}, {"limit", TypeCategory::Expression, true}, {"offset", TypeCategory::Expression, true}}}}, // order entries
                                     {"map", {Builtin::Map, {{"expressions", TypeCategory::ExpressionList}}}}, // compute new columns
                                     {"project", {Builtin::Project, {{"expressions", TypeCategory::ExpressionList}}}}, // restrict the result columns
+                                    {"as", {Builtin::As, {{"name", TypeCategory::Symbol}}}}, // rename the scope
                                  });
 //---------------------------------------------------------------------------
 /// The free functions
