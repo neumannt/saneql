@@ -37,6 +37,7 @@ const Functions Functions::table(nullptr,
                                     {"filter", {Builtin::Filter, {{"condition", TypeCategory::Expression}}}}, // filter tuples
                                     {"join", {Builtin::Join, {{"table", TypeCategory::Table}, {"on", TypeCategory::Expression}, {"type", TypeCategory::Symbol, true}}}}, // join tables
                                     {"groupby", {Builtin::GroupBy, {{"groups", TypeCategory::ExpressionList}, {"aggregates", TypeCategory::ExpressionList, true}, {"type", TypeCategory::Symbol, true}, {"sets", TypeCategory::ExpressionList, true}}}}, // aggregate
+                                    {"aggregate", {Builtin::Aggregate, {{"aggregate", TypeCategory::Expression}}}}, // aggregate to scalar
                                     {"orderby", {Builtin::OrderBy, {{"expressions", TypeCategory::ExpressionList}, {"limit", TypeCategory::Expression, true}, {"offset", TypeCategory::Expression, true}}}}, // order entries
                                     {"map", {Builtin::Map, {{"expressions", TypeCategory::ExpressionList}}}}, // compute new columns
                                     {"project", {Builtin::Project, {{"expressions", TypeCategory::ExpressionList}}}}, // restrict the result columns

@@ -576,6 +576,24 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeGroupBy(ExpressionRe
    return ExpressionResult(move(tree), move(resultBinding));
 }
 //---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAggregate(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
+// Analyze an aggregate computation
+{
+   // Prepare the grouping information
+   vector<algebra::GroupBy::Aggregation> aggregates;
+   BindingInfo resultBinding;
+
+   // Compute aggregate
+   BindingInfo::GroupByScope gbs(resultBinding, input.getBinding(), aggregates);
+   auto g = expressionListArgument(gbs.getBinding(), args[0]);
+   auto& result = g.front();
+   if (!result.value.isScalar()) reportError("aggregate requires scalar aggregates");
+
+   unique_ptr<algebra::Expression> tree = make_unique<algebra::Aggregate>(move(input.table()), move(aggregates), move(result.value.scalar()));
+
+   return ExpressionResult(move(tree), OrderingInfo::defaultOrder());
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult& input, const vector<const ast::FuncArg*>& args, bool project)
 // Analyze a map computation
 {
@@ -907,6 +925,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       }
       case Builtin::Join: return analyzeJoin(*base, args);
       case Builtin::GroupBy: return analyzeGroupBy(*base, args);
+      case Builtin::Aggregate: return analyzeAggregate(*base, args);
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);

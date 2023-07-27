@@ -82,13 +82,7 @@ class Select : public Operator {
 /// A map operator
 class Map : public Operator {
    public:
-   /// A regular computation
-   struct Entry {
-      /// The expression
-      std::unique_ptr<algebra::Expression> value;
-      /// The result IU
-      std::unique_ptr<algebra::IU> iu;
-   };
+   using Entry = AggregationLike::Entry;
 
    private:
    /// The input
@@ -136,28 +130,7 @@ class Join : public Operator {
 };
 //---------------------------------------------------------------------------
 /// A group by operator
-class GroupBy : public Operator {
-   public:
-   using Entry = Map::Entry;
-   /// Known aggregation functions
-   enum class Op {
-      CountStar,
-      Count,
-      Sum,
-      Min,
-      Max,
-      Avg
-   };
-   /// An aggregation
-   struct Aggregation {
-      /// The expression
-      std::unique_ptr<algebra::Expression> value;
-      /// The result IU
-      std::unique_ptr<algebra::IU> iu;
-      /// The operation
-      Op op;
-   };
-
+class GroupBy : public Operator, public AggregationLike {
    private:
    /// The input
    std::unique_ptr<Operator> input;

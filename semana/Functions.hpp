@@ -23,6 +23,7 @@ class Functions {
       Filter,
       Join,
       GroupBy,
+      Aggregate,
       OrderBy,
       Map,
       Project,

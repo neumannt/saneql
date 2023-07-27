@@ -121,5 +121,48 @@ void UnaryExpression::generate(SQLWriter& out)
    input->generateOperand(out);
 }
 //---------------------------------------------------------------------------
+Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates, unique_ptr<Expression> computation)
+   : Expression(computation->getType()), input(move(input)), aggregates(move(aggregates)), computation(move(computation))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void Aggregate::generate(SQLWriter& out)
+// Generate SQL
+{
+   out.write("(select ");
+   computation->generate(out);
+   if (!aggregates.empty()) {
+      out.write(" from (select ");
+      bool first = true;
+      for (auto& a : aggregates) {
+         if (first)
+            first = false;
+         else
+            out.write(", ");
+         switch (a.op) {
+            case Op::CountStar: out.write("count(*)"); break;
+            case Op::Count: out.write("count"); break;
+            case Op::Sum: out.write("sum"); break;
+            case Op::Avg: out.write("avg"); break;
+            case Op::Min: out.write("min"); break;
+            case Op::Max: out.write("max"); break;
+         }
+         if (a.op != Op::CountStar) {
+            out.write("(");
+            a.value->generate(out);
+            out.write(")");
+         }
+         out.write(" as ");
+         out.writeIU(a.iu.get());
+      }
+      out.write(" from ");
+      input->generate(out);
+      out.write(" s");
+      out.write(") s");
+   }
+   out.write(")");
+}
+//---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------

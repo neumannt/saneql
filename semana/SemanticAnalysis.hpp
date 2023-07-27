@@ -250,6 +250,8 @@ class SemanticAnalysis {
    ExpressionResult analyzeJoin(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a groupby computation
    ExpressionResult analyzeGroupBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
+   /// Analyze an aggregate computation
+   ExpressionResult analyzeAggregate(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an orderby computation
    ExpressionResult analyzeOrderBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a map or project computation

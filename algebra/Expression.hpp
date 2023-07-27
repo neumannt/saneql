@@ -16,6 +16,7 @@ class SQLWriter;
 namespace algebra {
 //---------------------------------------------------------------------------
 class IU;
+class Operator;
 //---------------------------------------------------------------------------
 /// Base class for expressions
 class Expression {
@@ -165,6 +166,53 @@ class UnaryExpression : public Expression {
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
 
    /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
+/// Helper for aggregation steps
+struct AggregationLike {
+   /// A regular computation
+   struct Entry {
+      /// The expression
+      std::unique_ptr<algebra::Expression> value;
+      /// The result IU
+      std::unique_ptr<algebra::IU> iu;
+   };
+   /// Known aggregation functions
+   enum class Op {
+      CountStar,
+      Count,
+      Sum,
+      Min,
+      Max,
+      Avg
+   };
+   /// An aggregation
+   struct Aggregation {
+      /// The expression
+      std::unique_ptr<algebra::Expression> value;
+      /// The result IU
+      std::unique_ptr<algebra::IU> iu;
+      /// The operation
+      Op op;
+   };
+};
+//---------------------------------------------------------------------------
+///n aggregate expression
+class Aggregate : public Expression, public AggregationLike {
+   private:
+   /// The input
+   std::unique_ptr<Operator> input;
+   /// The aggregates
+   std::vector<Aggregation> aggregates;
+   /// The final result computation
+   std::unique_ptr<Expression> computation;
+
+   public:
+   /// Constructor
+   Aggregate(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::unique_ptr<Expression> computation);
+
+   // Generate SQL
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
