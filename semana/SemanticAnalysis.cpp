@@ -926,6 +926,20 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          auto order = unifyCollate(base->getOrdering(), arg.getOrdering());
          return ExpressionResult(make_unique<algebra::ComparisonExpression>(move(base->scalar()), move(arg.scalar()), algebra::ComparisonExpression::Like, order.getCollate()), OrderingInfo::defaultOrder());
       }
+      case Builtin::Extract: {
+         auto partName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         algebra::ExtractExpression::Part part;
+         if (partName == "year") {
+            part = algebra::ExtractExpression::Part::Year;
+         } else if (partName == "month") {
+            part = algebra::ExtractExpression::Part::Month;
+         } else if (partName == "day") {
+            part = algebra::ExtractExpression::Part::Day;
+         } else {
+            reportError("unknown date part '" + partName + "'");
+         }
+         return ExpressionResult(make_unique<algebra::ExtractExpression>(move(base->scalar()), part), OrderingInfo::defaultOrder());
+      }
       case Builtin::Filter: {
          auto cond = scalarArgument(base->getBinding(), name, sig->arguments[0].name, args[0]);
          if (cond.scalar()->getType().getType() != Type::Bool) reportError("'filter' requires a boolean filter condition");

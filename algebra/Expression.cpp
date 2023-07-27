@@ -143,6 +143,26 @@ void UnaryExpression::generate(SQLWriter& out)
    input->generateOperand(out);
 }
 //---------------------------------------------------------------------------
+ExtractExpression::ExtractExpression(unique_ptr<Expression> input, Part part)
+   : Expression(Type::getInteger().withNullable(input->getType().isNullable())), input(move(input)), part(part)
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void ExtractExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   out.write("extract(");
+   switch (part) {
+      case Part::Year: out.write("year"); break;
+      case Part::Month: out.write("month"); break;
+      case Part::Day: out.write("day"); break;
+   }
+   out.write(" from ");
+   input->generateOperand(out);
+   out.write(")");
+}
+//---------------------------------------------------------------------------
 Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates, unique_ptr<Expression> computation)
    : Expression(computation->getType()), input(move(input)), aggregates(move(aggregates)), computation(move(computation))
 // Constructor

@@ -163,7 +163,7 @@ class BinaryExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
-/// Au unary expression
+/// An unary expression
 class UnaryExpression : public Expression {
    public:
    /// Possible operations
@@ -180,6 +180,28 @@ class UnaryExpression : public Expression {
    public:
    /// Constructor
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
+/// An extract expression
+class ExtractExpression : public Expression {
+   public:
+   /// Possible parts
+   enum Part {
+      Year,
+      Month,
+      Day
+   };
+   /// The input
+   std::unique_ptr<Expression> input;
+   /// The part
+   Part part;
+
+   public:
+   /// Constructor
+   ExtractExpression(std::unique_ptr<Expression> input, Part part);
 
    /// Generate SQL
    void generate(SQLWriter& out) override;

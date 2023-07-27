@@ -29,6 +29,13 @@ static const Functions textFunctions(&scalarFunctions,
                                         {"like", {Builtin::Like, {{"pattern", Type::getText()}}}} // a like predicate
                                      });
 //---------------------------------------------------------------------------
+/// Functions that are defined on date values
+static const Functions dateFunctions(&scalarFunctions,
+                                     {
+                                        // list of functions
+                                        {"extract", {Builtin::Extract, {{"part", TypeCategory::Symbol}}}} // extract part of a date
+                                     });
+//---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------
 /// Functions that are defined on tables
@@ -89,7 +96,7 @@ const Functions* Functions::getFunctions(Type type)
       case Type::Char: return &textFunctions;
       case Type::Varchar: return &textFunctions;
       case Type::Text: return &textFunctions;
-      case Type::Date: return &scalarFunctions;
+      case Type::Date: return &dateFunctions;
       case Type::Interval: return &scalarFunctions;
    }
    __builtin_unreachable();
