@@ -4,7 +4,7 @@ Call : func args;
 Cast : value type;
 DefineFunction : name args body;
 FuncArg :: Flat List : name value;
-FuncArgNamed :: Flat List : name value;
+FuncArgNamed :: Flat List Case : name value;
 LetArg : name type value;
 LetEntry : name args body;
 List : head tail;

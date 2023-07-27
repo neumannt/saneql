@@ -22,6 +22,7 @@ class Functions {
       Like,
       Between,
       Extract,
+      Case,
       Filter,
       Join,
       GroupBy,

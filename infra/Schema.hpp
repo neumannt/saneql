@@ -57,6 +57,11 @@ class Type {
    /// Get the maximum length of text types
    constexpr unsigned getLength() const { return (modifier >> 1); }
 
+   /// Comparison
+   bool operator==(const Type& o) const { return ((tag == o.tag) && (modifier == o.modifier)); }
+   /// Comparison
+   bool operator!=(const Type& o) const { return ((tag != o.tag) || (modifier != o.modifier)); }
+
    /// Create an unknown type
    static constexpr Type getUnknown() { return Type(Unknown, 0); }
    /// Create a boolean type

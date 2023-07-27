@@ -207,6 +207,44 @@ class ExtractExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// A simple case expression
+class SimpleCaseExpression : public Expression {
+   public:
+   using Cases = std::vector<std::pair<std::unique_ptr<algebra::Expression>, std::unique_ptr<algebra::Expression>>>;
+
+   /// The value to search
+   std::unique_ptr<Expression> value;
+   /// The cases
+   Cases cases;
+   /// The default result
+   std::unique_ptr<Expression> defaultValue;
+
+   public:
+   /// Constructor
+   SimpleCaseExpression(std::unique_ptr<Expression> value, Cases cases, std::unique_ptr<Expression> defaultValue);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
+/// A dearched case expression
+class SearchedCaseExpression : public Expression {
+   public:
+   using Cases = SimpleCaseExpression::Cases;
+
+   /// The cases
+   Cases cases;
+   /// The default result
+   std::unique_ptr<Expression> defaultValue;
+
+   public:
+   /// Constructor
+   SearchedCaseExpression(Cases cases, std::unique_ptr<Expression> defaultValue);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// Helper for aggregation steps
 struct AggregationLike {
    /// A regular computation
@@ -236,7 +274,7 @@ struct AggregationLike {
    };
 };
 //---------------------------------------------------------------------------
-///n aggregate expression
+/// An aggregate expression
 class Aggregate : public Expression, public AggregationLike {
    private:
    /// The input

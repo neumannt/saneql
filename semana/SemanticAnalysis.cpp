@@ -773,7 +773,12 @@ void SemanticAnalysis::enforceComparable(ExpressionResult& a, ExpressionResult& 
 {
    // Infer NULL types
    assert((a.isScalar()) && (b.isScalar()));
-   auto &sa = a.scalar(), &sb = b.scalar();
+   enforceComparable(a.scalar(), b.scalar());
+}
+//---------------------------------------------------------------------------
+void SemanticAnalysis::enforceComparable(unique_ptr<algebra::Expression>& sa, unique_ptr<algebra::Expression>& sb)
+// Make sure two values are comparable
+{
    if (sa->getType().getType() == Type::Unknown) {
       // Both NULL
       if (sb->getType().getType() == Type::Unknown) return;
@@ -957,6 +962,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min);
       case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max);
       case Builtin::Table: return analyzeTableConstruction(scope, args[0]);
+      case Builtin::Case: return analyzeCase(scope, args);
       case Builtin::As: {
          auto& b = base->accessBinding();
          auto newName = symbolArgument(name, sig->arguments[0].name, args[0]);
@@ -1030,7 +1036,49 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeTableConstruction(co
       binding.addBinding(s, columnNames[index], columns[index].get());
    }
    return ExpressionResult(make_unique<algebra::InlineTable>(move(columns), move(values), rowCount), move(binding));
-   ;
+}
+//---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCase(const BindingInfo& scope, const vector<const ast::FuncArg*>& args)
+// Analyze a case expression
+{
+   // Collect the cases
+   if (args[0]->getSubType() != ast::FuncArg::SubType::List)
+      reportError("case requires a list of cases");
+   vector<pair<unique_ptr<algebra::Expression>, unique_ptr<algebra::Expression>>> cases;
+   for (auto& a : TypedList<ast::FuncArgNamed>(args[0]->value)) {
+      if (a.getSubType() != ast::FuncArgNamed::SubType::Case) reportError("case requries cases of the form 'a => b'");
+      auto v = analyzeExpression(scope, a.name);
+      if (!v.isScalar()) reportError("case requires a scalar case value");
+      auto r = analyzeExpression(scope, a.value);
+      if (!r.isScalar()) reportError("case requires a scalar case result");
+      cases.emplace_back(move(v.scalar()), move(r.scalar()));
+   }
+   if (cases.empty()) reportError("case requires a list of cases");
+   unique_ptr<algebra::Expression> defaultValue(make_unique<algebra::ConstExpression>(nullptr, cases.front().second->getType().asNullable()));
+   if (args[1])
+      defaultValue = move(scalarArgument(scope, "case", "else", args[1]).scalar());
+
+   // Compute the result type
+   Type resultType = cases.front().second->getType().withNullable(defaultValue->getType().isNullable() | any_of(cases.begin(), cases.end(), [](auto& c) { return c.second->getType().isNullable(); }));
+   // TODO type unification
+   for (auto& c : cases)
+      if (c.second->getType().asNullable() != resultType.asNullable())
+         c.second = make_unique<algebra::CastExpression>(move(c.second), resultType);
+   if (defaultValue->getType().asNullable() != resultType.asNullable())
+      defaultValue = make_unique<algebra::CastExpression>(move(defaultValue), resultType);
+
+   // Distinguish between simple and searched case
+   if (args[2]) {
+      auto simpleValue = scalarArgument(scope, "case", "search", args[2]);
+      for (auto& c : cases)
+         enforceComparable(simpleValue.scalar(), c.first);
+      return ExpressionResult(make_unique<algebra::SimpleCaseExpression>(move(simpleValue.scalar()), move(cases), move(defaultValue)), OrderingInfo::defaultOrder());
+   } else {
+      for (auto& c : cases)
+         if (c.first->getType().getType() != Type::Bool)
+            reportError("case requires boolean case conditions");
+      return ExpressionResult(make_unique<algebra::SearchedCaseExpression>(move(cases), move(defaultValue)), OrderingInfo::defaultOrder());
+   }
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingInfo& scope, const ast::AST* exp)

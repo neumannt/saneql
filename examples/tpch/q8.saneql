@@ -1,0 +1,13 @@
+part
+.filter(p_type = 'ECONOMY ANODIZED STEEL')
+.join(lineitem, p_partkey=l_partkey)
+.join(supplier, s_suppkey=l_suppkey)
+.join(orders.filter(o_orderdate.between('1995-01-01'::date, '1996-12-31'::date)), l_orderkey=o_orderkey)
+.join(customer, o_custkey=c_custkey)
+.join(nation.as(n1), c_nationkey=n1.n_nationkey)
+.join(nation.as(n2), s_nationkey=n2.n_nationkey)
+.join(region.filter(r_name='AMERICA'), n1.n_regionkey=r_regionkey)
+.map({o_year:=o_orderdate.extract(year), volume:=l_extendedprice * (1 - l_discount), nation:=n2.n_name})
+.groupby({o_year}, {mkt_share:=sum(case({nation='BRAZIL' => volume}, else:=0))/sum(volume)})
+.orderby({o_year})
+

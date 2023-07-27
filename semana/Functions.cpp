@@ -62,6 +62,7 @@ const Functions Functions::freeFunctions(nullptr,
                                             {"min", {Builtin::AggMin, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"max", {Builtin::AggMax, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"table", {Builtin::Table, {{"values", TypeCategory::ExpressionList}}}}, // table construction
+                                            {"case", {Builtin::Case, {{"cases", TypeCategory::ExpressionList}, {"else", TypeCategory::Expression, true}, {"search", TypeCategory::Scalar, true}}}}, // case expression
                                          });
 //---------------------------------------------------------------------------
 Functions::Functions(const Functions* parent, std::initializer_list<std::pair<std::string, Signature>> signatures)

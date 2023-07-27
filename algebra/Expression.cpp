@@ -163,6 +163,49 @@ void ExtractExpression::generate(SQLWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
+SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases cases, unique_ptr<Expression> defaultValue)
+   : Expression(defaultValue->getType()), value(move(value)), cases(move(cases)), defaultValue(move(defaultValue))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void SimpleCaseExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   out.write("case ");
+   value->generateOperand(out);
+   for (auto& c : cases) {
+      out.write(" when ");
+      c.first->generate(out);
+      out.write(" then ");
+      c.second->generate(out);
+   }
+   out.write(" else ");
+   defaultValue->generate(out);
+   out.write(" end");
+}
+//---------------------------------------------------------------------------
+SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expression> defaultValue)
+   : Expression(defaultValue->getType()), cases(move(cases)), defaultValue(move(defaultValue))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void SearchedCaseExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   out.write("case");
+   for (auto& c : cases) {
+      out.write(" when ");
+      c.first->generate(out);
+      out.write(" then ");
+      c.second->generate(out);
+   }
+   out.write(" else ");
+   defaultValue->generate(out);
+   out.write(" end");
+}
+//---------------------------------------------------------------------------
 Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates, unique_ptr<Expression> computation)
    : Expression(computation->getType()), input(move(input)), aggregates(move(aggregates)), computation(move(computation))
 // Constructor

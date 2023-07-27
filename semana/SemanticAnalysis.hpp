@@ -246,6 +246,8 @@ class SemanticAnalysis {
    ExpressionResult analyzeBinaryExpression(const BindingInfo& scope, const ast::BinaryExpression& ast);
    /// Analyze a unary expression
    ExpressionResult analyzeUnaryExpression(const BindingInfo& scope, const ast::UnaryExpression& ast);
+   /// Analyze a case computation
+   ExpressionResult analyzeCase(const BindingInfo& scope, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a join computation
    ExpressionResult analyzeJoin(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a groupby computation
@@ -273,6 +275,8 @@ class SemanticAnalysis {
    std::vector<ExpressionArg> expressionListArgument(const BindingInfo& scope, const ast::FuncArg* arg);
    /// Make sure two values are comparable
    void enforceComparable(ExpressionResult& a, ExpressionResult& b);
+   /// Make sure two values are comparable
+   void enforceComparable(std::unique_ptr<algebra::Expression>& sa, std::unique_ptr<algebra::Expression>& sb);
    /// Analyze a call expression
    ExpressionResult analyzeCall(const BindingInfo& scope, const ast::Call& ast);
    /// Analyze a cast expression
