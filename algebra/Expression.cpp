@@ -39,11 +39,15 @@ void ConstExpression::generate(SQLWriter& out)
    if (null) {
       out.write("NULL");
    } else {
-      out.writeString(value);
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         out.write("::");
+         out.write("cast(");
+         out.writeString(value);
+         out.write(" as ");
          out.writeType(type);
+         out.write(")");
+      } else {
+         out.writeString(value);
       }
    }
 }
@@ -51,9 +55,11 @@ void ConstExpression::generate(SQLWriter& out)
 void CastExpression::generate(SQLWriter& out)
 // Generate SQL
 {
-   input->generateOperand(out);
-   out.write("::");
+   out.write("cast(");
+   input->generate(out);
+   out.write(" as ");
    out.writeType(getType());
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Mode mode, Collate collate)
