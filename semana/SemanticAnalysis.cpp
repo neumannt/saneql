@@ -912,6 +912,14 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          auto order = unifyCollate(base->getOrdering(), arg.getOrdering());
          return ExpressionResult(make_unique<algebra::ComparisonExpression>(move(base->scalar()), move(arg.scalar()), algebra::ComparisonExpression::Is, order.getCollate()), OrderingInfo::defaultOrder());
       }
+      case Builtin::Between: {
+         auto lower = scalarArgument(scope, name, sig->arguments[0].name, args[0]);
+         auto upper = scalarArgument(scope, name, sig->arguments[1].name, args[1]);
+         enforceComparable(*base, lower);
+         enforceComparable(*base, upper);
+         auto order = unifyCollate(unifyCollate(base->getOrdering(), lower.getOrdering()), upper.getOrdering());
+         return ExpressionResult(make_unique<algebra::BetweenExpression>(move(base->scalar()), move(lower.scalar()), move(upper.scalar()), order.getCollate()), OrderingInfo::defaultOrder());
+      }
       case Builtin::Like: {
          auto arg = scalarArgument(scope, name, sig->arguments[0].name, args[0]);
          if ((!isString(base->scalar()->getType())) || (!isString(arg.scalar()->getType()))) reportError("'like' requires string arguments");

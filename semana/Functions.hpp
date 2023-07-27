@@ -20,6 +20,7 @@ class Functions {
       Collate,
       Is,
       Like,
+      Between,
       Filter,
       Join,
       GroupBy,

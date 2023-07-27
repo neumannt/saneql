@@ -86,6 +86,22 @@ void ComparisonExpression::generate(SQLWriter& out)
    right->generateOperand(out);
 }
 //---------------------------------------------------------------------------
+BetweenExpression::BetweenExpression(unique_ptr<Expression> base, unique_ptr<Expression> lower, unique_ptr<Expression> upper, Collate collate)
+   : Expression(Type::getBool().withNullable(base->getType().isNullable() || lower->getType().isNullable() || upper->getType().isNullable())), base(move(base)), lower(move(lower)), upper(move(upper)), collate(collate)
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void BetweenExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   base->generateOperand(out);
+   out.write(" between ");
+   lower->generateOperand(out);
+   out.write(" and ");
+   upper->generateOperand(out);
+}
+//---------------------------------------------------------------------------
 BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Type resultType, Operation op)
    : Expression(resultType), left(move(left)), right(move(right)), op(op)
 // Constructor

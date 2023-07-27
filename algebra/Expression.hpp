@@ -119,6 +119,22 @@ class ComparisonExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// A between expression
+class BetweenExpression : public Expression {
+   public:
+   /// The input
+   std::unique_ptr<Expression> base, lower, upper;
+   /// The collation
+   Collate collate;
+
+   public:
+   /// Constructor
+   BetweenExpression(std::unique_ptr<Expression> base, std::unique_ptr<Expression> lower, std::unique_ptr<Expression> upper, Collate collate);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// A binary expression
 class BinaryExpression : public Expression {
    public:
