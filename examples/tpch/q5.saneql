@@ -1,0 +1,10 @@
+customer
+.join(orders.filter(o_orderdate >= '1994-01-01'::date && o_orderdate < '1994-01-01'::date + '1 year'::interval), c_custkey=o_custkey)
+.join(lineitem, l_orderkey=o_orderkey)
+.join(supplier, l_suppkey=s_suppkey)
+.join(nation, s_nationkey=n_nationkey)
+.join(region.filter(r_name='ASIA'), n_regionkey=r_regionkey)
+.groupby({n_name}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
+.orderby({revenue.desc()})
+.project({n_name, revenue})
+
