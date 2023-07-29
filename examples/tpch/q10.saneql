@@ -1,0 +1,9 @@
+let base := '1993-10-01'::date,
+orders
+.filter(o_orderdate >= base && o_orderdate < base + '3 month'::interval)
+.join(customer, c_custkey=o_custkey)
+.join(lineitem.filter(l_returnflag='R'), l_orderkey=o_orderkey)
+.join(nation, c_nationkey=n_nationkey)
+.groupby({c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
+.orderby({revenue.desc()}, limit:=20)
+

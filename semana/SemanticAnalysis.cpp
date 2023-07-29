@@ -1092,11 +1092,20 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingI
       return ExpressionResult(make_unique<algebra::IURef>(iu), OrderingInfo::defaultOrder());
    }
 
-   // An argument
+   // An argument?
    for (auto iter = &scope; iter; iter = iter->parentScope) {
       if (auto arg = iter->lookupArgument(name); arg.first) {
          return analyzeExpression(arg.second ? *arg.second : scope, arg.first);
       }
+   }
+
+   // A let?
+   if (auto iter = letLookup.find(name); iter != letLookup.end()) {
+      auto& l = lets[iter->second];
+      if (!l.signature.arguments.empty()) reportError("'" + name + "' is a function");
+      SetLetScopeLimit setLetScopeLimit(this, iter->second);
+      BindingInfo callScope;
+      return analyzeExpression(callScope, l.body);
    }
 
    // Table scan?
