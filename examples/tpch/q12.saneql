@@ -1,0 +1,7 @@
+let base := '1994-01-01'::date,
+lineitem
+.filter(l_commitdate < l_receiptdate && l_shipdate < l_commitdate && l_receiptdate >= base && l_receiptdate < base + '1 year'::interval && l_shipmode.in({'MAIL', 'SHIP'}))
+.join(orders, o_orderkey=l_orderkey)
+.groupby(l_shipmode, {high_line_count:=sum(case({o_orderpriority = '1-URGENT' || o_orderpriority = '2-HIGH' => 1}, else:=0)), low_line_count:=sum(case({o_orderpriority <> '1-URGENT' && o_orderpriority <> '2-HIGH' => 1}, else:=0))})
+.orderby(l_shipmode)
+

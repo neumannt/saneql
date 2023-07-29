@@ -135,6 +135,24 @@ class BetweenExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// An in expression
+class InExpression : public Expression {
+   public:
+   /// The input
+   std::unique_ptr<Expression> probe;
+   /// The values to check against
+   std::vector<std::unique_ptr<Expression>> values;
+   /// The collation
+   Collate collate;
+
+   public:
+   /// Constructor
+   InExpression(std::unique_ptr<Expression> probe, std::vector<std::unique_ptr<Expression>> values, Collate collate);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// A binary expression
 class BinaryExpression : public Expression {
    public:

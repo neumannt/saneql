@@ -264,6 +264,8 @@ class SemanticAnalysis {
    std::string symbolArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a scalar argument
    ExpressionResult scalarArgument(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
+   /// Handle a list of scalar arguments
+   std::vector<ExpressionResult> scalarArgumentList(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a table argument
    ExpressionResult tableArgument(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Expression argument

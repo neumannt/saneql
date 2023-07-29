@@ -19,7 +19,8 @@ static const Functions scalarFunctions(nullptr,
                                           {"desc", {Builtin::Desc, {}}}, // change order to descending
                                           {"collate", {Builtin::Desc, {{"collate", TypeCategory::Symbol}}}}, // change collate
                                           {"is", {Builtin::Is, {{"other", TypeCategory::Scalar}}}}, // check for equality handling NULL
-                                          {"between", {Builtin::Between, {{"lower", TypeCategory::Scalar}, {"upper", TypeCategory::Scalar}}}} // range check
+                                          {"between", {Builtin::Between, {{"lower", TypeCategory::Scalar}, {"upper", TypeCategory::Scalar}}}}, // range check
+                                          {"in", {Builtin::In, {{"values", TypeCategory::ExpressionList}}}} // check against a list of values
                                        });
 //---------------------------------------------------------------------------
 /// Functions that are defined on text types

@@ -1,6 +1,7 @@
 #include "algebra/Expression.hpp"
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
+#include <algorithm>
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -100,6 +101,28 @@ void BetweenExpression::generate(SQLWriter& out)
    lower->generateOperand(out);
    out.write(" and ");
    upper->generateOperand(out);
+}
+//---------------------------------------------------------------------------
+InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expression>> values, Collate collate)
+   : Expression(Type::getBool().withNullable(probe->getType().isNullable() || any_of(values.begin(), values.end(), [](auto& e) { return e->getType().isNullable(); }))), probe(move(probe)), values(move(values)), collate(collate)
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void InExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   probe->generateOperand(out);
+   out.write(" in (");
+   bool first = true;
+   for (auto& v : values) {
+      if (first)
+         first = false;
+      else
+         out.write(", ");
+      v->generate(out);
+   }
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Type resultType, Operation op)

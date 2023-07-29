@@ -741,7 +741,7 @@ string SemanticAnalysis::symbolArgument(const string& funcName, const string& ar
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::scalarArgument(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
-// Handle a symbol argument
+// Handle a scalar argument
 {
    if (arg->getSubType() != ast::FuncArg::SubType::Flat) reportError("parameter '" + argName + "' requires a scalar in call to '" + funcName + "'");
    auto r = analyzeExpression(scope, arg->value);
@@ -749,8 +749,28 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::scalarArgument(const Bindin
    return r;
 }
 //---------------------------------------------------------------------------
+vector<SemanticAnalysis::ExpressionResult> SemanticAnalysis::scalarArgumentList(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
+// Handle a list of scalar arguments
+{
+   // As convenience we also accept a single value as list
+   vector<ExpressionResult> result;
+   if (arg->getSubType() == ast::FuncArg::SubType::Flat) {
+      result.push_back(scalarArgument(scope, funcName, argName, arg));
+      return result;
+   }
+
+   if (arg->getSubType() != ast::FuncArg::SubType::List) reportError("parameter '" + argName + "' requires a list of scalars in call to '" + funcName + "'");
+   for (auto& e : TypedList<ast::FuncArgNamed>(arg->value)) {
+      if (e.getSubType() != ast::FuncArgNamed::SubType::Flat) reportError("parameter '" + argName + "' requires a list of scalars in call to '" + funcName + "'");
+      auto r = analyzeExpression(scope, e.value);
+      if (!r.isScalar()) reportError("parameter '" + argName + "' requires a list of scalars in call to '" + funcName + "'");
+      result.push_back(move(r));
+   }
+   return result;
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::tableArgument(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
-// Handle a symbol argument
+// Handle a table argument
 {
    if (arg->getSubType() != ast::FuncArg::SubType::Flat) reportError("parameter '" + argName + "' requires a table in call to '" + funcName + "'");
    auto r = analyzeExpression(scope, arg->value);
@@ -946,6 +966,18 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          enforceComparable(*base, upper);
          auto order = unifyCollate(unifyCollate(base->getOrdering(), lower.getOrdering()), upper.getOrdering());
          return ExpressionResult(make_unique<algebra::BetweenExpression>(move(base->scalar()), move(lower.scalar()), move(upper.scalar()), order.getCollate()), OrderingInfo::defaultOrder());
+      }
+      case Builtin::In: {
+         auto values = scalarArgumentList(scope, name, sig->arguments[0].name, args[0]);
+         if (values.empty()) return ExpressionResult(make_unique<algebra::ConstExpression>("false", Type::getBool()), OrderingInfo::defaultOrder());
+         auto order = base->getOrdering();
+         vector<unique_ptr<algebra::Expression>> vals;
+         for (auto& v : values) {
+            enforceComparable(*base, v);
+            order = unifyCollate(order, v.getOrdering());
+            vals.push_back(move(v.scalar()));
+         }
+         return ExpressionResult(make_unique<algebra::InExpression>(move(base->scalar()), move(vals), order.getCollate()), OrderingInfo::defaultOrder());
       }
       case Builtin::Like: {
          auto arg = scalarArgument(scope, name, sig->arguments[0].name, args[0]);
