@@ -1,0 +1,16 @@
+let base := '1994-01-01'::date,
+let qty_per_ps(ps_partkey, ps_suppkey) :=
+   lineitem
+   .filter(l_partkey = ps_partkey && l_suppkey = ps_suppkey && l_shipdate >= base && l_shipdate < base + '1 year'::interval)
+   .aggregate(sum(l_quantity)),
+let avail :=
+   partsupp
+   .join(part.filter(p_name.like('forest%')), ps_partkey=p_partkey, type:=leftsemi)
+   .filter(ps_availqty > 0.5*qty_per_ps(ps_partkey, ps_suppkey))
+   .project(ps_suppkey),
+supplier
+.join(nation.filter(n_name='CANADA'), s_nationkey=n_nationkey)
+.join(avail, s_suppkey=ps_suppkey, type:=leftsemi)
+.orderby({s_name})
+.project({s_name, s_address})
+
