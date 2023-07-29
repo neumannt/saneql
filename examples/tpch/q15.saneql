@@ -1,0 +1,12 @@
+let base := '1996-01-01'::date,
+let revenue:=
+   lineitem
+   .filter(l_shipdate >= base && l_shipdate < base + '3 month'::interval)
+   .groupby(l_suppkey, {total_revenue:=sum(l_extendedprice * (1 - l_discount))})
+   .project({supplier_no:=l_suppkey, total_revenue}),
+supplier
+.join(revenue, s_suppkey = supplier_no)
+.filter(total_revenue=revenue.aggregate(max(total_revenue)))
+.orderby({s_suppkey})
+.project({s_suppkey, s_name, s_address, s_phone, total_revenue})
+
