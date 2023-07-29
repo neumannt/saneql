@@ -262,6 +262,8 @@ class SemanticAnalysis {
    ExpressionResult analyzeMap(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args, bool project);
    /// Handle a symbol argument
    std::string symbolArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
+   /// Handle a constant boolean argument
+   bool constBoolArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a scalar argument
    ExpressionResult scalarArgument(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a list of scalar arguments

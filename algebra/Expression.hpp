@@ -276,10 +276,13 @@ struct AggregationLike {
    enum class Op {
       CountStar,
       Count,
+      CountDistinct,
       Sum,
+      SumDistinct,
       Min,
       Max,
-      Avg
+      Avg,
+      AvgDistinct
    };
    /// An aggregation
    struct Aggregation {

@@ -57,9 +57,9 @@ const Functions Functions::table(nullptr,
 const Functions Functions::freeFunctions(nullptr,
                                          {
                                             // list of functions
-                                            {"count", {Builtin::AggCount, {{"value", TypeCategory::Expression, true}}}}, // aggregate
-                                            {"sum", {Builtin::AggSum, {{"value", TypeCategory::Expression}}}}, // aggregate
-                                            {"avg", {Builtin::AggAvg, {{"value", TypeCategory::Expression}}}}, // aggregate
+                                            {"count", {Builtin::AggCount, {{"value", TypeCategory::Expression, true}, {"distinct", TypeCategory::Symbol, true}}}}, // aggregate
+                                            {"sum", {Builtin::AggSum, {{"value", TypeCategory::Expression}, {"distinct", TypeCategory::Symbol, true}}}}, // aggregate
+                                            {"avg", {Builtin::AggAvg, {{"value", TypeCategory::Expression}, {"distinct", TypeCategory::Symbol, true}}}}, // aggregate
                                             {"min", {Builtin::AggMin, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"max", {Builtin::AggMax, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"table", {Builtin::Table, {{"values", TypeCategory::ExpressionList}}}}, // table construction

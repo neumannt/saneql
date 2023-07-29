@@ -740,6 +740,16 @@ string SemanticAnalysis::symbolArgument(const string& funcName, const string& ar
    return extractSymbol(arg->value);
 }
 //---------------------------------------------------------------------------
+bool SemanticAnalysis::constBoolArgument(const string& funcName, const string& argName, const ast::FuncArg* arg)
+// Handle a const bool argument
+{
+   if (arg->getSubType() != ast::FuncArg::SubType::Flat) reportError("parameter '" + argName + "' requires a boolean constant in call to '" + funcName + "'");
+   if (arg->value->getType() != ast::AST::Type::Literal) reportError("parameter '" + argName + "' requires a boolean constant in call to '" + funcName + "'");
+   auto& l = ast::Literal::ref(arg->value);
+   if ((l.getSubType() != ast::Literal::SubType::True) && (l.getSubType() != ast::Literal::SubType::False)) reportError("parameter '" + argName + "' requires a boolean constant in call to '" + funcName + "'");
+   return (l.getSubType() == ast::Literal::SubType::True);
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::scalarArgument(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
 // Handle a scalar argument
 {
@@ -932,16 +942,21 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
    }
 
    // Logic for handling aggregates
-   auto handleAggregate = [&](algebra::GroupBy::Op op) {
+   auto handleAggregate = [&](algebra::GroupBy::Op op, algebra::GroupBy::Op distinctOp) {
       auto gbs = scope.getGroupByScope();
       if (!gbs) reportError("aggregate '" + name + "' can only be used in group by computations");
+
+      if (args[1] && constBoolArgument(name, "distinct", args[1])) {
+         op = distinctOp;
+      }
+
       ExpressionResult exp(unique_ptr<algebra::Expression>(), OrderingInfo::defaultOrder());
       Type resultType = Type::getInteger();
       if (op != algebra::GroupBy::Op::CountStar) {
          exp = scalarArgument(gbs->preAggregation, "aggregate", name, args[0]);
          if ((op != algebra::GroupBy::Op::Min) && (op != algebra::GroupBy::Op::Max) && (!isNumeric(exp.scalar()->getType()))) reportError("aggregate '" + name + "' requires a numerical argument");
          resultType = exp.scalar()->getType(); // TODO fix type inference
-         if (op == algebra::GroupBy::Op::Count) resultType = Type::getInteger();
+         if ((op == algebra::GroupBy::Op::Count) || (op == algebra::GroupBy::Op::CountDistinct)) resultType = Type::getInteger();
       }
       gbs->aggregations.push_back({move(exp.scalar()), make_unique<algebra::IU>(resultType), op});
       return ExpressionResult(make_unique<algebra::IURef>(gbs->aggregations.back().iu.get()), OrderingInfo::defaultOrder());
@@ -1010,11 +1025,11 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);
-      case Builtin::AggCount: return handleAggregate(args[0] ? algebra::GroupBy::Op::Count : algebra::GroupBy::Op::CountStar);
-      case Builtin::AggSum: return handleAggregate(algebra::GroupBy::Op::Sum);
-      case Builtin::AggAvg: return handleAggregate(algebra::GroupBy::Op::Avg);
-      case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min);
-      case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max);
+      case Builtin::AggCount: return handleAggregate(args[0] ? algebra::GroupBy::Op::Count : algebra::GroupBy::Op::CountStar, args[0] ? algebra::GroupBy::Op::CountDistinct : algebra::GroupBy::Op::CountStar);
+      case Builtin::AggSum: return handleAggregate(algebra::GroupBy::Op::Sum, algebra::GroupBy::Op::SumDistinct);
+      case Builtin::AggAvg: return handleAggregate(algebra::GroupBy::Op::Avg, algebra::GroupBy::Op::AvgDistinct);
+      case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min, algebra::GroupBy::Op::Min);
+      case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max, algebra::GroupBy::Op::Max);
       case Builtin::Table: return analyzeTableConstruction(scope, args[0]);
       case Builtin::Case: return analyzeCase(scope, args);
       case Builtin::As: {

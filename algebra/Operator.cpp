@@ -186,14 +186,16 @@ void GroupBy::generate(SQLWriter& out)
          out.write(", ");
       switch (a.op) {
          case Op::CountStar: out.write("count(*)"); break;
-         case Op::Count: out.write("count"); break;
-         case Op::Sum: out.write("sum"); break;
-         case Op::Avg: out.write("avg"); break;
-         case Op::Min: out.write("min"); break;
-         case Op::Max: out.write("max"); break;
+         case Op::Count: out.write("count("); break;
+         case Op::CountDistinct: out.write("count(distinct "); break;
+         case Op::Sum: out.write("sum("); break;
+         case Op::SumDistinct: out.write("sum(distinct "); break;
+         case Op::Avg: out.write("avg("); break;
+         case Op::AvgDistinct: out.write("avg(distinct "); break;
+         case Op::Min: out.write("min("); break;
+         case Op::Max: out.write("max("); break;
       }
       if (a.op != Op::CountStar) {
-         out.write("(");
          a.value->generate(out);
          out.write(")");
       }
