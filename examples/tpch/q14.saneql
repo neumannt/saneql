@@ -1,0 +1,6 @@
+let base:='1995-09-01'::date,
+lineitem
+.filter(l_shipdate >= base && l_shipdate < base + '1 month'::interval)
+.join(part, l_partkey=p_partkey)
+.aggregate(100.00*sum(case({p_type.like('PROMO%') => l_extendedprice * (1 - l_discount)}, else:=0)) / sum(l_extendedprice * (1 - l_discount)))
+
