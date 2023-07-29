@@ -314,7 +314,7 @@ class reportingparser final : public parser {
 // All non-keyword SaneQLLexer tokens and their corresponding bison tokens
 #define SQLLEXER_TOKENS(A,B) \
    A(Eof,EndOfFile) A(Error,Error) B(Asterisk,'*') B(Circumflex,'^') A(ClientCommand,Error) B(Colon,':') A(ColonColon,TYPECAST) A(ColonEquals,COLON_EQUALS) B(Comma,',') \
-   B(Dot,'.') A(DotDot,DOT_DOT) B(Equals,'=') A(EqualsGreater,EQUALS_GREATER) A(Float,FCONST) B(Greater,'>') A(GreaterEquals,GREATER_EQUALS) A(Identifier,IDENT) \
+   B(Dot,'.') A(DotDot,DOT_DOT) B(Equals,'=') A(EqualsGreater,EQUALS_GREATER) A(Exclamation, NOT) A(Float,FCONST) B(Greater,'>') A(GreaterEquals,GREATER_EQUALS) A(Identifier,IDENT) \
    A(Integer,ICONST) B(LCurly,'{') B(LParen,'(') B(LSquare,'[') B(Less,'<') A(LessEquals,LESS_EQUALS) B(Minus,'-') A(NotEquals,NOT_EQUALS) A(Operator,Op) B(Percent,'%') \
    A(Parameter,PARAM) B(Plus,'+') B(RCurly,'}') B(RParen,')') B(RSquare,']') B(SemiColon,';') B(Solidus,'/') A(String,SCONST) A(UnterminatedLiteral,Error) A(UnterminatedMultilineComment,Error)
 

@@ -541,6 +541,7 @@ SaneQLLexer::Token SaneQLLexer::lexOperator(TokenInfo& info)
          case '=': return Token::Equals;
          case '>': return Token::Greater;
          case '^': return Token::Circumflex;
+         case '!': return Token::Exclamation;
       }
    } else if ((current - begin) == 2) {
       char c = begin[0];

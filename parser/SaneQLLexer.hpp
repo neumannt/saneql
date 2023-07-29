@@ -28,6 +28,7 @@ class SaneQLLexer {
       DotDot,
       Equals,
       EqualsGreater,
+      Exclamation,
       Float,
       Greater,
       GreaterEquals,
