@@ -1,0 +1,8 @@
+let avg_for_part(p_partkey) :=
+   lineitem.filter(l_partkey=p_partkey).aggregate(0.2*avg(l_quantity)),
+part
+.filter(p_brand = 'Brand#23' && p_container = 'MED BOX')
+.join(lineitem, p_partkey=l_partkey)
+.filter(l_quantity < avg_for_part(p_partkey))
+
+
