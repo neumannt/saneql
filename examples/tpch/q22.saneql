@@ -1,0 +1,12 @@
+let avg_for_selected :=
+   customer
+   .filter(c_acctbal > 0.00 && c_phone.substr(1,2).in({'13', '31', '23', '29', '30', '18', '17'}))
+   .aggregate(avg(c_acctbal)),
+customer
+.map({cntrycode:=c_phone.substr(1,2)})
+.filter(cntrycode.in({'13', '31', '23', '29', '30', '18', '17'}) && c_acctbal > avg_for_selected)
+.join(orders, o_custkey=c_custkey, type:=leftanti)
+.join(orders, o_custkey=c_custkey, type:=leftanti)
+.groupby({cntrycode}, {numcust:=count(), totacctbal:=sum(c_acctbal)})
+.orderby({cntrycode})
+

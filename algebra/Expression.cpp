@@ -186,6 +186,28 @@ void ExtractExpression::generate(SQLWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
+SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expression> from, unique_ptr<Expression> len)
+   : Expression(value->getType().withNullable(value->getType().isNullable() || (from ? from->getType().isNullable() : false) || (len ? len->getType().isNullable() : false))), value(move(value)), from(move(from)), len(move(len))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void SubstrExpression::generate(SQLWriter& out)
+// Generate SQL
+{
+   out.write("substring(");
+   value->generate(out);
+   if (from) {
+      out.write(" from ");
+      from->generate(out);
+   }
+   if (len) {
+      out.write(" for ");
+      len->generate(out);
+   }
+   out.write(")");
+}
+//---------------------------------------------------------------------------
 SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases cases, unique_ptr<Expression> defaultValue)
    : Expression(defaultValue->getType()), value(move(value)), cases(move(cases)), defaultValue(move(defaultValue))
 // Constructor

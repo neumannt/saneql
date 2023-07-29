@@ -27,7 +27,8 @@ static const Functions scalarFunctions(nullptr,
 static const Functions textFunctions(&scalarFunctions,
                                      {
                                         // list of functions
-                                        {"like", {Builtin::Like, {{"pattern", Type::getText()}}}} // a like predicate
+                                        {"like", {Builtin::Like, {{"pattern", Type::getText()}}}}, // a like predicate
+                                        {"substr", {Builtin::Substr, {{"from", Type::getInteger(), true}, {"for", Type::getInteger(), true}}}} // a like predicate
                                      });
 //---------------------------------------------------------------------------
 /// Functions that are defined on date values

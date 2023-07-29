@@ -225,6 +225,20 @@ class ExtractExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// A substring expression
+class SubstrExpression : public Expression {
+   public:
+   /// The input
+   std::unique_ptr<Expression> value, from, len;
+
+   public:
+   /// Constructor
+   SubstrExpression(std::unique_ptr<Expression> value, std::unique_ptr<Expression> from, std::unique_ptr<Expression> len);
+
+   /// Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// A simple case expression
 class SimpleCaseExpression : public Expression {
    public:

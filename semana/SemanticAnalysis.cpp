@@ -1000,6 +1000,19 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          auto order = unifyCollate(base->getOrdering(), arg.getOrdering());
          return ExpressionResult(make_unique<algebra::ComparisonExpression>(move(base->scalar()), move(arg.scalar()), algebra::ComparisonExpression::Like, order.getCollate()), OrderingInfo::defaultOrder());
       }
+      case Builtin::Substr: {
+         unique_ptr<algebra::Expression> from, len;
+         if ((!args[0]) && (!args[1])) reportError("'substr' requires numeric arguments");
+         if (args[0]) {
+            from = move(scalarArgument(scope, name, sig->arguments[0].name, args[0]).scalar());
+            if (!isNumeric(from->getType())) reportError("'substr' requires numeric arguments");
+         }
+         if (args[1]) {
+            len = move(scalarArgument(scope, name, sig->arguments[1].name, args[1]).scalar());
+            if (!isNumeric(len->getType())) reportError("'substr' requires numeric arguments");
+         }
+         return ExpressionResult(make_unique<algebra::SubstrExpression>(move(base->scalar()), move(from), move(len)), OrderingInfo::defaultOrder());
+      }
       case Builtin::Extract: {
          auto partName = symbolArgument(name, sig->arguments[0].name, args[0]);
          algebra::ExtractExpression::Part part;

@@ -20,6 +20,7 @@ class Functions {
       Collate,
       Is,
       Like,
+      Substr,
       Between,
       In,
       Extract,
