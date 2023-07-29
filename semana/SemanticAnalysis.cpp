@@ -308,6 +308,28 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeQuery(const ast::AST
    return analyzeExpression(emptyScope, qb.body);
 }
 //---------------------------------------------------------------------------
+static Type inferDecimalType(SemanticAnalysis& semana, const string& s) {
+   auto iter = s.begin(), limit = s.end();
+
+   // Skip sign
+   while ((iter != limit) && (((*iter) == '+') || ((*iter) == '-'))) ++iter;
+
+   // Count digits before dot
+   unsigned before = 0, after = 0;
+   while ((iter != limit) && (*iter != '.')) {
+      ++iter;
+      ++before;
+   }
+
+   // Count digits after the dot
+   if ((iter != limit) && (*iter == '.')) after = limit - iter - 1;
+
+   unsigned precision = before + after, scale = after;
+   if (precision < 1) precision = 1;
+   if (precision > 38) semana.reportError("decimal value out of range");
+   return Type::getDecimal(precision, scale);
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeLiteral(const ast::Literal& literal)
 // Analyze a literal
 {
@@ -315,7 +337,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeLiteral(const ast::L
    unique_ptr<algebra::Expression> exp;
    switch (literal.getSubType()) {
       case SubType::Integer: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getInteger()); break;
-      case SubType::Float: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getDecimal(15, 2)); break; // TODO compute the correct type
+      case SubType::Float: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), inferDecimalType(*this, extractString(literal.arg))); break;
       case SubType::String: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getText()); break;
       case SubType::True: exp = make_unique<algebra::ConstExpression>("true", Type::getBool()); break;
       case SubType::False: exp = make_unique<algebra::ConstExpression>("false", Type::getBool()); break;

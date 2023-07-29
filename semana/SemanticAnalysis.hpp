@@ -227,6 +227,7 @@ class SemanticAnalysis {
       ~SetLetScopeLimit() { semana->letScopeLimit = oldLimit; }
    };
 
+   public:
    /// Report an error
    [[noreturn]] void reportError(std::string message);
    /// Invalid AST node
@@ -238,6 +239,7 @@ class SemanticAnalysis {
    /// Analyze a type
    ExtendedType analyzeType(const ast::Type& type);
 
+   private:
    /// Analyze a literal
    ExpressionResult analyzeLiteral(const ast::Literal& literal);
    /// Analyze access
