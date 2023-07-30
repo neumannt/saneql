@@ -496,7 +496,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeUnaryExpression(cons
    __builtin_unreachable();
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(const BindingInfo& scope, ExpressionResult& input, const vector<const ast::FuncArg*>& args)
 // Analyze a groupby computation
 {
    // Analyze the join type
@@ -530,8 +530,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(ExpressionResul
    }
 
    // Analyze the other table
-   BindingInfo empty;
-   auto other = tableArgument(empty, "join", "table", args[0]);
+   auto other = tableArgument(scope, "join", "table", args[0]);
    BindingInfo resultBinding;
    if (leftOnly || rightOnly) {
       resultBinding = input.getBinding();
@@ -642,7 +641,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAggregate(Expression
    return ExpressionResult(move(tree), OrderingInfo::defaultOrder());
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(const BindingInfo& scope, Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
 // Analyze a set computation
 {
    // Name for error reporting
@@ -665,12 +664,11 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(Functio
       op = all ? algebra::SetOperation::Op::IntersectAll : algebra::SetOperation::Op::Intersect;
 
    // Analyze the other table
-   BindingInfo empty;
-   auto other = tableArgument(empty, name, "table", args[0]);
+   auto other = tableArgument(scope, name, "table", args[0]);
 
    // Check that the schema matches
    BindingInfo result;
-   auto scope = result.addScope(name);
+   auto resultScope = result.addScope(name);
    if (input.getBinding().columns.size() != other.getBinding().columns.size()) reportError("'"s + name + "' requires tables with identical schema");
    vector<unique_ptr<algebra::Expression>> leftColumns, rightColumns;
    vector<unique_ptr<algebra::IU>> resultIUs;
@@ -682,7 +680,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(Functio
       auto t1 = iu1->getType(), t2 = iu2->getType();
       if (t1.asNullable() != t2.asNullable()) reportError("'"s + name + "' requires tables with identical schema. Mismatch in column " + to_string(index));
       resultIUs.push_back(make_unique<algebra::IU>(t1.withNullable(t1.isNullable() || t2.isNullable())));
-      result.addBinding(scope, input.getBinding().columns[index].name, resultIUs.back().get());
+      result.addBinding(resultScope, input.getBinding().columns[index].name, resultIUs.back().get());
    }
 
    // Construct the result
@@ -1105,12 +1103,12 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          if (cond.scalar()->getType().getType() != Type::Bool) reportError("'filter' requires a boolean filter condition");
          return ExpressionResult(make_unique<algebra::Select>(move(base->table()), move(cond.scalar())), move(base->accessBinding()));
       }
-      case Builtin::Join: return analyzeJoin(*base, args);
+      case Builtin::Join: return analyzeJoin(scope, *base, args);
       case Builtin::GroupBy: return analyzeGroupBy(*base, args);
       case Builtin::Aggregate: return analyzeAggregate(*base, args);
-      case Builtin::Union: return analyzeSetOperation(sig->builtin, *base, args);
-      case Builtin::Except: return analyzeSetOperation(sig->builtin, *base, args);
-      case Builtin::Intersect: return analyzeSetOperation(sig->builtin, *base, args);
+      case Builtin::Union: return analyzeSetOperation(scope, sig->builtin, *base, args);
+      case Builtin::Except: return analyzeSetOperation(scope, sig->builtin, *base, args);
+      case Builtin::Intersect: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);

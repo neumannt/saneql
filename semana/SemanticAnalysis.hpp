@@ -255,13 +255,13 @@ class SemanticAnalysis {
    /// Analyze a case computation
    ExpressionResult analyzeCase(const BindingInfo& scope, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a join computation
-   ExpressionResult analyzeJoin(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
+   ExpressionResult analyzeJoin(const BindingInfo& scope, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a groupby computation
    ExpressionResult analyzeGroupBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an aggregate computation
    ExpressionResult analyzeAggregate(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a set computation
-   ExpressionResult analyzeSetOperation(Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
+   ExpressionResult analyzeSetOperation(const BindingInfo& scope, Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an orderby computation
    ExpressionResult analyzeOrderBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a map or project computation

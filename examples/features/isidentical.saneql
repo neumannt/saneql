@@ -1,0 +1,4 @@
+let isidentical(t1 table, t2 table) :=
+   t1.except(t2, all:=true).union(t2.except(t1, all:=true)).aggregate(count())=0,
+isidentical(nation.filter(n_nationkey<100), nation)
+
