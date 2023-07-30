@@ -642,6 +642,53 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAggregate(Expression
    return ExpressionResult(move(tree), OrderingInfo::defaultOrder());
 }
 //---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
+// Analyze a set computation
+{
+   // Name for error reporting
+   string name;
+   if (builtin == Functions::Builtin::Union)
+      name = "union";
+   else if (builtin == Functions::Builtin::Except)
+      name = "except";
+   else
+      name = "intersect";
+
+   // Analyze operation type
+   algebra::SetOperation::Op op;
+   bool all = args[1] ? constBoolArgument(name, "all", args[1]) : false;
+   if (builtin == Functions::Builtin::Union)
+      op = all ? algebra::SetOperation::Op::UnionAll : algebra::SetOperation::Op::Union;
+   else if (builtin == Functions::Builtin::Except)
+      op = all ? algebra::SetOperation::Op::ExceptAll : algebra::SetOperation::Op::Except;
+   else
+      op = all ? algebra::SetOperation::Op::IntersectAll : algebra::SetOperation::Op::Intersect;
+
+   // Analyze the other table
+   BindingInfo empty;
+   auto other = tableArgument(empty, name, "table", args[0]);
+
+   // Check that the schema matches
+   BindingInfo result;
+   auto scope = result.addScope(name);
+   if (input.getBinding().columns.size() != other.getBinding().columns.size()) reportError("'"s + name + "' requires tables with identical schema");
+   vector<unique_ptr<algebra::Expression>> leftColumns, rightColumns;
+   vector<unique_ptr<algebra::IU>> resultIUs;
+   for (unsigned index = 0, limit = input.getBinding().columns.size(); index != limit; ++index) {
+      auto iu1 = input.getBinding().columns[index].iu;
+      auto iu2 = other.getBinding().columns[index].iu;
+      leftColumns.push_back(make_unique<algebra::IURef>(iu1));
+      rightColumns.push_back(make_unique<algebra::IURef>(iu2));
+      auto t1 = iu1->getType(), t2 = iu2->getType();
+      if (t1.asNullable() != t2.asNullable()) reportError("'"s + name + "' requires tables with identical schema. Mismatch in column " + to_string(index));
+      resultIUs.push_back(make_unique<algebra::IU>(t1.withNullable(t1.isNullable() || t2.isNullable())));
+      result.addBinding(scope, input.getBinding().columns[index].name, resultIUs.back().get());
+   }
+
+   // Construct the result
+   return ExpressionResult(make_unique<algebra::SetOperation>(move(input.table()), move(other.table()), move(leftColumns), move(rightColumns), move(resultIUs), op), move(result));
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult& input, const vector<const ast::FuncArg*>& args, bool project)
 // Analyze a map computation
 {
@@ -1061,6 +1108,9 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::Join: return analyzeJoin(*base, args);
       case Builtin::GroupBy: return analyzeGroupBy(*base, args);
       case Builtin::Aggregate: return analyzeAggregate(*base, args);
+      case Builtin::Union: return analyzeSetOperation(sig->builtin, *base, args);
+      case Builtin::Except: return analyzeSetOperation(sig->builtin, *base, args);
+      case Builtin::Intersect: return analyzeSetOperation(sig->builtin, *base, args);
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);

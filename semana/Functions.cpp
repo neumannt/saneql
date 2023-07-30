@@ -52,6 +52,9 @@ const Functions Functions::table(nullptr,
                                     {"map", {Builtin::Map, {{"expressions", TypeCategory::ExpressionList}}}}, // compute new columns
                                     {"project", {Builtin::Project, {{"expressions", TypeCategory::ExpressionList}}}}, // restrict the result columns
                                     {"as", {Builtin::As, {{"name", TypeCategory::Symbol}}}}, // rename the scope
+                                    {"union", {Builtin::Union, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set union
+                                    {"except", {Builtin::Except, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set except
+                                    {"intersect", {Builtin::Intersect, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set intersect
                                  });
 //---------------------------------------------------------------------------
 /// The free functions

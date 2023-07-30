@@ -98,6 +98,37 @@ class Map : public Operator {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// A set operation operator
+class SetOperation : public Operator {
+   public:
+   /// Operation types
+   enum class Op {
+      Union,
+      UnionAll,
+      Except,
+      ExceptAll,
+      Intersect,
+      IntersectAll
+   };
+
+   private:
+   /// The input
+   std::unique_ptr<Operator> left, right;
+   /// The input columns
+   std::vector<std::unique_ptr<Expression>> leftColumns, rightColumns;
+   /// The result columns
+   std::vector<std::unique_ptr<IU>> resultColumns;
+   /// The operation
+   Op op;
+
+   public:
+   /// Constructor
+   SetOperation(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::vector<std::unique_ptr<Expression>> leftColumns, std::vector<std::unique_ptr<Expression>> rightColumns, std::vector<std::unique_ptr<IU>> resultColumns, Op op);
+
+   // Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// A join operator
 class Join : public Operator {
    public:

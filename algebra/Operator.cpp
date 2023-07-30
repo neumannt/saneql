@@ -74,6 +74,62 @@ void Map::generate(SQLWriter& out)
    out.write(" s)");
 }
 //---------------------------------------------------------------------------
+SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)
+   : left(move(left)), right(move(right)), leftColumns(move(leftColumns)), rightColumns(move(rightColumns)), resultColumns(move(resultColumns)), op(op)
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void SetOperation::generate(SQLWriter& out)
+// Generate SQL
+{
+   auto dumpColumns = [&out](const vector<unique_ptr<Expression>>& columns) {
+      if (columns.empty()) {
+         out.write("1");
+      } else {
+         bool first = true;
+         for (auto& c : columns) {
+            if (first)
+               first = false;
+            else
+               out.write(", ");
+            c->generate(out);
+         }
+      }
+   };
+   out.write("(select * from ((select ");
+   dumpColumns(leftColumns);
+   out.write(" from ");
+   left->generate(out);
+   out.write(" l) ");
+   switch (op) {
+      case Op::Union: out.write("union"); break;
+      case Op::UnionAll: out.write("union all"); break;
+      case Op::Except: out.write("except"); break;
+      case Op::ExceptAll: out.write("except all"); break;
+      case Op::Intersect: out.write("intersect"); break;
+      case Op::IntersectAll: out.write("intersect all"); break;
+   }
+   out.write(" (select ");
+   dumpColumns(rightColumns);
+   out.write(" from ");
+   right->generate(out);
+   out.write(" r)) s");
+   if (!resultColumns.empty()) {
+      out.write("(");
+      bool first = true;
+      for (auto& c : resultColumns) {
+         if (first)
+            first = false;
+         else
+            out.write(", ");
+         out.writeIU(c.get());
+      }
+      out.write(")");
+   }
+   out.write(")");
+}
+//---------------------------------------------------------------------------
 Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Expression> condition, JoinType joinType)
    : left(move(left)), right(move(right)), condition(move(condition)), joinType(joinType)
 // Constructor
