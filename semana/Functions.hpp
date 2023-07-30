@@ -27,6 +27,7 @@ class Functions {
       Case,
       Filter,
       Join,
+      Gensym,
       GroupBy,
       Aggregate,
       OrderBy,

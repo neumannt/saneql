@@ -216,6 +216,8 @@ class SemanticAnalysis {
    std::unordered_map<std::string, unsigned> letLookup;
    /// Visibility limit for lets
    unsigned letScopeLimit = ~0u;
+   /// The next symbol id
+   unsigned nextSymbolId = 1;
 
    /// Change the let scope limit
    class SetLetScopeLimit {
@@ -240,6 +242,8 @@ class SemanticAnalysis {
    ExtendedType analyzeType(const ast::Type& type);
 
    private:
+   /// Recognize gensym calls. Returns an empty string otherwise
+   std::string recognizeGensym(const ast::AST* ast);
    /// Analyze a literal
    ExpressionResult analyzeLiteral(const ast::Literal& literal);
    /// Analyze access

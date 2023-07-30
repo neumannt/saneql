@@ -65,6 +65,7 @@ const Functions Functions::freeFunctions(nullptr,
                                             {"max", {Builtin::AggMax, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"table", {Builtin::Table, {{"values", TypeCategory::ExpressionList}}}}, // table construction
                                             {"case", {Builtin::Case, {{"cases", TypeCategory::ExpressionList}, {"else", TypeCategory::Expression, true}, {"search", TypeCategory::Scalar, true}}}}, // case expression
+                                            {"gensym", {Builtin::Gensym, {{"name", TypeCategory::Symbol, true}}}}, // create a unique symbol
                                          });
 //---------------------------------------------------------------------------
 Functions::Functions(const Functions* parent, std::initializer_list<std::pair<std::string, Signature>> signatures)

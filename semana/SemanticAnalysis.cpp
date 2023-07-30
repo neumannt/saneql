@@ -308,6 +308,32 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeQuery(const ast::AST
    return analyzeExpression(emptyScope, qb.body);
 }
 //---------------------------------------------------------------------------
+string SemanticAnalysis::recognizeGensym(const ast::AST* ast)
+// Recognize gensym calls. Returns an empty string otherwise
+{
+   if ((!ast) || (ast->getType() != ast::AST::Type::Call)) return {};
+   auto& c = ast::Call::ref(ast);
+   if (c.func->getType() != ast::AST::Type::Token) return {};
+   if (extractString(c.func) != "gensym") return {};
+
+   string name = "sym";
+   if (c.args) {
+      bool first = true;
+      for (auto& a : TypedList<ast::FuncArg>(c.args)) {
+         if (first)
+            first = false;
+         else
+            return {};
+         if (a.getSubType() != ast::FuncArg::SubType::Flat) return {};
+         if (a.name && extractString(a.name) != "name") return {};
+         if (a.value && a.value->getType() != ast::AST::Type::Token) return {};
+         if (a.value) name = extractString(a.value);
+      }
+   }
+
+   return " " + name + to_string(nextSymbolId++);
+}
+//---------------------------------------------------------------------------
 static Type inferDecimalType(SemanticAnalysis& semana, const string& s) {
    auto iter = s.begin(), limit = s.end();
 
@@ -1052,6 +1078,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          b.scopes[newName].columns = b.columnLookup;
          return move(*base);
       }
+      case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
    }
 
    reportError("call not implemented yet");
