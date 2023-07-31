@@ -540,6 +540,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(const BindingIn
       resultBinding = move(input.getBinding());
    }
    resultBinding.join(other.getBinding());
+   resultBinding.parentScope = &scope;
 
    // Analyze the join condition
    auto cond = scalarArgument(resultBinding, "join", "condition", args[1]);
