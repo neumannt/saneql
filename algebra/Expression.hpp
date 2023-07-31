@@ -298,6 +298,21 @@ struct AggregationLike {
       Avg,
       AvgDistinct
    };
+   /// Known window functions
+   enum class WindowOp {
+      CountStar,
+      Count,
+      CountDistinct,
+      Sum,
+      SumDistinct,
+      Min,
+      Max,
+      Avg,
+      AvgDistinct,
+      RowNumber
+   };
+   static_assert(static_cast<unsigned>(Op::AvgDistinct) == static_cast<unsigned>(WindowOp::AvgDistinct));
+
    /// An aggregation
    struct Aggregation {
       /// The expression

@@ -317,23 +317,27 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 void Window::generate(SQLWriter& out)
 // Generate SQL
 {
+   auto aggr = [&out](const char* name, const Aggregation& a, bool distinct = false) {
+      out.write(name);
+      out.write("(");
+      if (distinct) out.write("distinct ");
+      a.value->generate(out);
+      out.write(")");
+   };
    out.write("(select *");
    for (auto& a : aggregates) {
       out.write(", ");
-      switch (a.op) {
+      switch (static_cast<WindowOp>(a.op)) {
          case Op::CountStar: out.write("count(*)"); break;
-         case Op::Count: out.write("count("); break;
-         case Op::CountDistinct: out.write("count(distinct "); break;
-         case Op::Sum: out.write("sum("); break;
-         case Op::SumDistinct: out.write("sum(distinct "); break;
-         case Op::Avg: out.write("avg("); break;
-         case Op::AvgDistinct: out.write("avg(distinct "); break;
-         case Op::Min: out.write("min("); break;
-         case Op::Max: out.write("max()"); break;
-      }
-      if (a.op != Op::CountStar) {
-         a.value->generate(out);
-         out.write(")");
+         case Op::Count: aggr("count", a); break;
+         case Op::CountDistinct: aggr("count", a, true); break;
+         case Op::Sum: aggr("sum", a); break;
+         case Op::SumDistinct: aggr("sum", a, true); break;
+         case Op::Avg: aggr("avg", a); break;
+         case Op::AvgDistinct: aggr("avg", a, true); break;
+         case Op::Min: aggr("min", a); break;
+         case Op::Max: aggr("max", a); break;
+         case Op::RowNumber: out.write("row_number()"); break;
       }
       out.write(" over (");
       if (!partitionBy.empty()) {

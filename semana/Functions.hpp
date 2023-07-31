@@ -45,6 +45,7 @@ class Functions {
       AggAvg,
       AggMin,
       AggMax,
+      WindowRowNumber,
       Table
    };
    /// Type category

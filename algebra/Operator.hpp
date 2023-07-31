@@ -207,6 +207,9 @@ class Sort : public Operator {
 //---------------------------------------------------------------------------
 /// A window operator
 class Window : public Operator, public AggregationLike {
+   public:
+   using Op = WindowOp;
+
    private:
    /// The input
    std::unique_ptr<Operator> input;

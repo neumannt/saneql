@@ -152,6 +152,8 @@ class SemanticAnalysis::BindingInfo::GroupByScope {
    vector<algebra::GroupBy::Aggregation>& aggregations;
    /// The old group by scope
    GroupByScope* oldScope;
+   /// Is a window operatopn?
+   bool isWindow = false;
 
    /// Constructor
    GroupByScope(BindingInfo& postAggregation, const BindingInfo& preAggregation, vector<algebra::GroupBy::Aggregation>& aggregations) : postAggregation(postAggregation), preAggregation(preAggregation), aggregations(aggregations), oldScope(postAggregation.gbs) { postAggregation.gbs = this; }
@@ -814,6 +816,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeWindow(ExpressionRes
    if (args[0]) {
       // Compute aggregates
       BindingInfo::GroupByScope gbs(resultBinding, input.getBinding(), aggregates);
+      gbs.isWindow = true;
       auto g = expressionListArgument(gbs.getBinding(), args[0]);
       for (auto& e : g) {
          if (!e.value.isScalar()) reportError("window requires scalar aggregates");
@@ -1165,6 +1168,17 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       return ExpressionResult(make_unique<algebra::IURef>(gbs->aggregations.back().iu.get()), OrderingInfo::defaultOrder());
    };
 
+   // Logic for handling window functions
+   auto handleWindow = [&](algebra::Window::Op op) {
+      auto gbs = scope.getGroupByScope();
+      if ((!gbs) || (!gbs->isWindow)) reportError("aggregate '" + name + "' can only be used in window computations");
+
+      ExpressionResult exp(unique_ptr<algebra::Expression>(), OrderingInfo::defaultOrder());
+      Type resultType = Type::getInteger(); // TODO handle all window operations
+      gbs->aggregations.push_back({move(exp.scalar()), make_unique<algebra::IU>(resultType), static_cast<algebra::GroupBy::Op>(op)});
+      return ExpressionResult(make_unique<algebra::IURef>(gbs->aggregations.back().iu.get()), OrderingInfo::defaultOrder());
+   };
+
    // Handle the functions
    using Builtin = Functions::Builtin;
    switch (sig->builtin) {
@@ -1252,6 +1266,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::AggAvg: return handleAggregate(algebra::GroupBy::Op::Avg, algebra::GroupBy::Op::AvgDistinct);
       case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min, algebra::GroupBy::Op::Min);
       case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max, algebra::GroupBy::Op::Max);
+      case Builtin::WindowRowNumber: return handleWindow(algebra::Window::Op::RowNumber);
       case Builtin::Table: return analyzeTableConstruction(scope, args[0]);
       case Builtin::Case: return analyzeCase(scope, args);
       case Builtin::As: {
