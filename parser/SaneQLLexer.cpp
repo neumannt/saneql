@@ -1,6 +1,7 @@
 #include "parser/SaneQLLexer.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <string>

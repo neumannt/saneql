@@ -773,7 +773,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionRe
    if (args[1]) limit = handleConstant("limit", args[1]);
    if (args[2]) offset = handleConstant("offset", args[2]);
 
-   return ExpressionResult(make_unique<algebra::Sort>(move(input.table()), move(order), limit, offset), move(input.getBinding()));
+   return ExpressionResult(make_unique<algebra::Sort>(move(input.table()), move(order), limit, offset), move(input.accessBinding()));
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExtendedType SemanticAnalysis::analyzeType(const ast::Type& type)
