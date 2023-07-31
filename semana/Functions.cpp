@@ -48,9 +48,11 @@ const Functions Functions::table(nullptr,
                                     {"join", {Builtin::Join, {{"table", TypeCategory::Table}, {"on", TypeCategory::Expression}, {"type", TypeCategory::Symbol, true}}}}, // join tables
                                     {"groupby", {Builtin::GroupBy, {{"groups", TypeCategory::ExpressionList}, {"aggregates", TypeCategory::ExpressionList, true}, {"type", TypeCategory::Symbol, true}, {"sets", TypeCategory::ExpressionList, true}}}}, // aggregate
                                     {"aggregate", {Builtin::Aggregate, {{"aggregate", TypeCategory::Expression}}}}, // aggregate to scalar
+                                    {"distinct", {Builtin::Distinct, {}}}, // remove duplicates
                                     {"orderby", {Builtin::OrderBy, {{"expressions", TypeCategory::ExpressionList}, {"limit", TypeCategory::Expression, true}, {"offset", TypeCategory::Expression, true}}}}, // order entries
                                     {"map", {Builtin::Map, {{"expressions", TypeCategory::ExpressionList}}}}, // compute new columns
                                     {"project", {Builtin::Project, {{"expressions", TypeCategory::ExpressionList}}}}, // restrict the result columns
+                                    {"projectout", {Builtin::ProjectOut, {{"columns", TypeCategory::ExpressionList}}}}, // restrict the result columns
                                     {"as", {Builtin::As, {{"name", TypeCategory::Symbol}}}}, // rename the scope
                                     {"union", {Builtin::Union, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set union
                                     {"except", {Builtin::Except, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set except

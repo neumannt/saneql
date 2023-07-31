@@ -641,6 +641,24 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAggregate(Expression
    return ExpressionResult(move(tree), OrderingInfo::defaultOrder());
 }
 //---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeDistinct(ExpressionResult& input)
+// Analyze a distinct computation
+{
+   // Remove duplicates with groupby
+   vector<algebra::GroupBy::Entry> groupBy;
+   vector<algebra::GroupBy::Aggregation> aggregates;
+   BindingInfo resultBinding;
+   auto scope = resultBinding.addScope("distinct");
+   for (auto& c : input.accessBinding().columns) {
+      groupBy.push_back(algebra::GroupBy::Entry{make_unique<algebra::IURef>(c.iu), make_unique<algebra::IU>(c.iu->getType())});
+      resultBinding.addBinding(scope, c.name, groupBy.back().iu.get());
+   }
+
+   unique_ptr<algebra::Operator> tree = make_unique<algebra::GroupBy>(move(input.table()), move(groupBy), move(aggregates));
+
+   return ExpressionResult(move(tree), move(resultBinding));
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(const BindingInfo& scope, Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args)
 // Analyze a set computation
 {
@@ -740,6 +758,47 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult
    }
 
    return ExpressionResult(move(tree), move(resultBinding));
+}
+//---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeProjectOut(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
+// Analyze a map computation
+{
+   // Compute the expressions
+   auto g = expressionListArgument(input.getBinding(), args[0]);
+   unordered_set<const algebra::IU*> toRemove;
+   for (auto& e : g) {
+      if (!e.value.isScalar()) reportError("projectout requires scalar values");
+      auto ref = dynamic_cast<algebra::IURef*>(e.value.scalar().get());
+      if (!ref) reportError("projectout requires column references");
+      toRemove.insert(ref->getIU());
+   }
+
+   // Make expressions visible
+   BindingInfo resultBinding = move(input.accessBinding());
+   erase_if(resultBinding.columns, [&](auto& e) { return toRemove.contains(e.iu); });
+   for (auto iter = resultBinding.columnLookup.begin(); iter != resultBinding.columnLookup.end();)
+      if (toRemove.contains(iter->second))
+         iter = resultBinding.columnLookup.erase(iter);
+      else
+         ++iter;
+   for (auto iter = resultBinding.scopes.begin(); iter != resultBinding.scopes.end();) {
+      auto& cols = iter->second.columns;
+      if (!cols.empty()) {
+         for (auto iter2 = cols.begin(); iter2 != cols.end();)
+            if (toRemove.contains(iter2->second))
+               iter2 = cols.erase(iter2);
+            else
+               ++iter2;
+         if (cols.empty())
+            iter = resultBinding.scopes.erase(iter);
+         else
+            ++iter;
+      } else {
+         ++iter;
+      }
+   }
+
+   return ExpressionResult(move(input.table()), move(resultBinding));
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
@@ -1106,12 +1165,14 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::Join: return analyzeJoin(scope, *base, args);
       case Builtin::GroupBy: return analyzeGroupBy(*base, args);
       case Builtin::Aggregate: return analyzeAggregate(*base, args);
+      case Builtin::Distinct: return analyzeDistinct(*base);
       case Builtin::Union: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::Except: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::Intersect: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);
+      case Builtin::ProjectOut: return analyzeProjectOut(*base, args);
       case Builtin::AggCount: return handleAggregate(args[0] ? algebra::GroupBy::Op::Count : algebra::GroupBy::Op::CountStar, args[0] ? algebra::GroupBy::Op::CountDistinct : algebra::GroupBy::Op::CountStar);
       case Builtin::AggSum: return handleAggregate(algebra::GroupBy::Op::Sum, algebra::GroupBy::Op::SumDistinct);
       case Builtin::AggAvg: return handleAggregate(algebra::GroupBy::Op::Avg, algebra::GroupBy::Op::AvgDistinct);

@@ -260,12 +260,16 @@ class SemanticAnalysis {
    ExpressionResult analyzeGroupBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an aggregate computation
    ExpressionResult analyzeAggregate(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
+   /// Analyze a distinct computation
+   ExpressionResult analyzeDistinct(ExpressionResult& input);
    /// Analyze a set computation
    ExpressionResult analyzeSetOperation(const BindingInfo& scope, Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an orderby computation
    ExpressionResult analyzeOrderBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a map or project computation
    ExpressionResult analyzeMap(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args, bool project);
+   /// Analyze a projectout computation
+   ExpressionResult analyzeProjectOut(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Handle a symbol argument
    std::string symbolArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a constant boolean argument
