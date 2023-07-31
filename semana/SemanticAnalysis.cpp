@@ -801,6 +801,79 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeProjectOut(Expressio
    return ExpressionResult(move(input.table()), move(resultBinding));
 }
 //---------------------------------------------------------------------------
+SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeWindow(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
+// Analyze a window computation
+{
+   // frame support TODO
+   if (args[3] || args[4] || args[5]) reportError("frames not implemented yet");
+
+   // Compute the expressions
+   vector<algebra::Map::Entry> results;
+   vector<algebra::GroupBy::Aggregation> aggregates;
+   BindingInfo resultBinding = input.getBinding();
+   if (args[0]) {
+      // Compute aggregates
+      BindingInfo::GroupByScope gbs(resultBinding, input.getBinding(), aggregates);
+      auto g = expressionListArgument(gbs.getBinding(), args[0]);
+      for (auto& e : g) {
+         if (!e.value.isScalar()) reportError("window requires scalar aggregates");
+         auto et = e.value.scalar()->getType();
+         results.push_back(algebra::GroupBy::Entry{move(e.value.scalar()), make_unique<algebra::IU>(et)});
+      }
+
+      // Make aggregates visible
+      unsigned slot = 0;
+      auto scope = resultBinding.addScope("window");
+      for (auto& e : g) {
+         string name = move(e.name);
+         if (name.empty()) {
+            name = to_string(scope->columns.size() + 1);
+         }
+         if (auto iuref = dynamic_cast<algebra::IURef*>(results[slot].value.get())) {
+            resultBinding.addBinding(scope, name, iuref->getIU());
+            results[slot].iu.reset();
+         } else {
+            resultBinding.addBinding(scope, name, results[slot].iu.get());
+         }
+         ++slot;
+      }
+      for (unsigned index = 0; index < results.size();)
+         if (!results[index].iu) {
+            swap(results[index], results.back());
+            results.pop_back();
+         } else {
+            ++index;
+         }
+   }
+
+   // Analyze the partition-by clause
+   vector<unique_ptr<algebra::Expression>> partitionBy;
+   if (args[1]) {
+      auto g = expressionListArgument(input.getBinding(), args[1]);
+      for (auto& e : g) {
+         if (!e.value.isScalar()) reportError("partitionby requires scalar order values");
+         partitionBy.push_back(move(e.value.scalar()));
+      }
+   }
+
+   // Analyze the order-by clause
+   vector<algebra::Sort::Entry> order;
+   if (args[2]) {
+      auto g = expressionListArgument(input.getBinding(), args[2]);
+      for (auto& e : g) {
+         if (!e.value.isScalar()) reportError("orderby requires scalar order values");
+         auto o = e.value.getOrdering();
+         order.push_back({move(e.value.scalar()), o.getCollate(), o.isDescending()});
+      }
+   }
+
+   unique_ptr<algebra::Operator> tree = move(input.table());
+   tree = make_unique<algebra::Window>(move(tree), move(aggregates), move(partitionBy), move(order));
+   tree = make_unique<algebra::Map>(move(tree), move(results));
+
+   return ExpressionResult(move(tree), move(resultBinding));
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionResult& input, const vector<const ast::FuncArg*>& args)
 // Analyze a groupby computation
 {
@@ -1169,6 +1242,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::Union: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::Except: return analyzeSetOperation(scope, sig->builtin, *base, args);
       case Builtin::Intersect: return analyzeSetOperation(scope, sig->builtin, *base, args);
+      case Builtin::Window: return analyzeWindow(*base, args);
       case Builtin::OrderBy: return analyzeOrderBy(*base, args);
       case Builtin::Map: return analyzeMap(*base, args, false);
       case Builtin::Project: return analyzeMap(*base, args, true);

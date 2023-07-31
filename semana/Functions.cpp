@@ -57,6 +57,7 @@ const Functions Functions::table(nullptr,
                                     {"union", {Builtin::Union, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set union
                                     {"except", {Builtin::Except, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set except
                                     {"intersect", {Builtin::Intersect, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set intersect
+                                    {"window", {Builtin::Window, {{"expressions", TypeCategory::ExpressionList}, {"partitionby", TypeCategory::ExpressionList, true}, {"orderby", TypeCategory::ExpressionList, true}, {"framebegin", TypeCategory::Expression, true}, {"framend", TypeCategory::Expression, true}, {"frametype", TypeCategory::Symbol, true}}}}, // window computation
                                  });
 //---------------------------------------------------------------------------
 /// The free functions

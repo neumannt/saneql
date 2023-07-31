@@ -205,6 +205,26 @@ class Sort : public Operator {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
+/// A window operator
+class Window : public Operator, public AggregationLike {
+   private:
+   /// The input
+   std::unique_ptr<Operator> input;
+   /// The aggregates
+   std::vector<Aggregation> aggregates;
+   /// The partition by expressions
+   std::vector<std::unique_ptr<Expression>> partitionBy;
+   /// The order by expression
+   std::vector<Sort::Entry> orderBy;
+
+   public:
+   /// Constructor
+   Window(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::vector<std::unique_ptr<Expression>> partitionBy, std::vector<Sort::Entry> orderBy);
+
+   // Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
 /// An inline table definition
 class InlineTable : public Operator {
    public:

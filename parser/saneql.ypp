@@ -216,7 +216,7 @@ FuncArgs:
 
 FuncArg:
    Identifier COLON_EQUALS Expression { ast FuncArg Flat name=1 value=3 }
- | Identifier COLON_EQUALS '{' FuncArgList '}' { ast FuncArg List name=1 value=3 }
+ | Identifier COLON_EQUALS '{' FuncArgList '}' { ast FuncArg List name=1 value=4 }
  | Expression { ast FuncArg Flat value=1 }
  | '{' FuncArgList '}' { ast FuncArg List value=2 }
 ;

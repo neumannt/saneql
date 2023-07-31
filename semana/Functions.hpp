@@ -38,6 +38,7 @@ class Functions {
       Union,
       Except,
       Intersect,
+      Window,
       As,
       AggCount,
       AggSum,

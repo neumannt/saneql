@@ -264,6 +264,8 @@ class SemanticAnalysis {
    ExpressionResult analyzeDistinct(ExpressionResult& input);
    /// Analyze a set computation
    ExpressionResult analyzeSetOperation(const BindingInfo& scope, Functions::Builtin builtin, ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
+   /// Analyze a window computation
+   ExpressionResult analyzeWindow(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze an orderby computation
    ExpressionResult analyzeOrderBy(ExpressionResult& input, const std::vector<const ast::FuncArg*>& args);
    /// Analyze a map or project computation
