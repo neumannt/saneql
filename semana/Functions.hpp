@@ -40,6 +40,7 @@ class Functions {
       Intersect,
       Window,
       As,
+      Alias,
       AggCount,
       AggSum,
       AggAvg,

@@ -1008,6 +1008,24 @@ static string inferName(const ast::AST* exp)
 vector<SemanticAnalysis::ExpressionArg> SemanticAnalysis::expressionListArgument(const BindingInfo& scope, const ast::FuncArg* arg)
 // Handle expression list arguments
 {
+   // Accept alias variables as convenience feature
+   auto recognizeAliasVar=[&](const ast::AST* ast) -> const vector<const algebra::IU*>* {
+      if ((!ast)||(ast->getType()!=ast::AST::Type::Token)) return nullptr;
+
+      auto name = extractSymbol(ast);
+
+      // A column reference?
+      if (scope.columnLookup.contains(name)) return nullptr;
+
+      // An alias reference?
+      if (auto iter = scope.aliases.find(name);iter!=scope.aliases.end()) {
+         if (iter->second.ambiguous) reportError("'" + name + "' is ambiguous");
+         return &(iter->second.columns);
+      }
+      return nullptr;
+   };
+
+
    vector<SemanticAnalysis::ExpressionArg> result;
    // As convenience feature we also support single expressions
    if (arg->getSubType() == ast::FuncArg::SubType::Flat) {
@@ -1015,13 +1033,19 @@ vector<SemanticAnalysis::ExpressionArg> SemanticAnalysis::expressionListArgument
    } else {
       for (auto& a : TypedList<ast::FuncArgNamed>(arg->value)) {
          if (a.getSubType() != ast::FuncArgNamed::SubType::Flat) reportError("nested expression list not allowed here");
-         auto e = analyzeExpression(scope, a.value);
-         string name;
-         if (a.name)
-            name = extractSymbol(a.name);
-         else
-            name = inferName(a.value);
-         result.push_back({move(name), move(e)});
+         if (auto ac = recognizeAliasVar(a.value)) {
+            for (auto e:*ac) {
+               result.push_back({{}, ExpressionResult(make_unique<algebra::IURef>(e), OrderingInfo::defaultOrder())});
+            }
+         } else {
+            auto e = analyzeExpression(scope, a.value);
+            string name;
+            if (a.name)
+               name = extractSymbol(a.name);
+            else
+               name = inferName(a.value);
+            result.push_back({move(name), move(e)});
+         }
       }
    }
    return result;
@@ -1277,6 +1301,16 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          b.scopes[newName].columns = b.columnLookup;
          return move(*base);
       }
+      case Builtin::Alias: {
+         auto& b = base->accessBinding();
+         auto newName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         auto& a = b.aliases[newName];
+         a.ambiguous=false;
+         a.columns.clear();
+         a.columns.reserve(b.columns.size());
+         for (auto& c:b.columns) a.columns.push_back(c.iu);
+         return move(*base);
+      }
       case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
    }
 
@@ -1392,7 +1426,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCase(const BindingIn
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingInfo& scope, const ast::AST* exp)
 // Analyze a token
 {
-   auto name = extractString(exp);
+   auto name = extractSymbol(exp);
 
    // A column reference?
    if (auto iu = scope.lookup(name)) {
@@ -1468,6 +1502,8 @@ void SemanticAnalysis::analyzeLet(const ast::LetEntry& ast)
                argType = Functions::TypeCategory::Table;
             } else if (tn == "expression") {
                argType = Functions::TypeCategory::Expression;
+            } else if (tn == "symbol") {
+               argType = Functions::TypeCategory::Symbol;
             } else {
                reportError("unsupported argument type '" + tn + "'");
             }

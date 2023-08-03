@@ -54,6 +54,7 @@ const Functions Functions::table(nullptr,
                                     {"project", {Builtin::Project, {{"expressions", TypeCategory::ExpressionList}}}}, // restrict the result columns
                                     {"projectout", {Builtin::ProjectOut, {{"columns", TypeCategory::ExpressionList}}}}, // restrict the result columns
                                     {"as", {Builtin::As, {{"name", TypeCategory::Symbol}}}}, // rename the scope
+                                    {"alias", {Builtin::As, {{"name", TypeCategory::Symbol}}}}, // provide alias name for columns
                                     {"union", {Builtin::Union, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set union
                                     {"except", {Builtin::Except, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set except
                                     {"intersect", {Builtin::Intersect, {{"table", TypeCategory::Table}, {"all", TypeCategory::Symbol, true}}}}, // set intersect

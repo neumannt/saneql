@@ -93,12 +93,21 @@ class SemanticAnalysis {
          /// Is the scope ambiguous?
          bool ambiguous = false;
       };
+      /// Alias information
+      struct Alias {
+         /// The columns
+         std::vector<const algebra::IU*> columns;
+         /// Is the alias ambiguous?
+         bool ambiguous = false;
+      };
       /// The well defined column order
       std::vector<Column> columns;
       /// Mapping from column name to IU
       std::unordered_map<std::string, const algebra::IU*> columnLookup;
       /// Scoped columns
       std::unordered_map<std::string, Scope> scopes;
+      /// Column aliases
+      std::unordered_map<std::string, Alias> aliases;
       /// The arguments
       std::unordered_map<std::string, std::pair<const ast::AST*, const BindingInfo*>> arguments;
       /// The parent scope for function calls (if any)
