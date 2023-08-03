@@ -221,15 +221,21 @@ const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const string& binding, 
 void SemanticAnalysis::BindingInfo::registerArgument(const string& name, const ast::AST* ast, const BindingInfo* scope)
 // Register an argument
 {
-   arguments[name] = {ast, scope};
+   arguments[name] = ArgumentInformation{{pair<const ast::AST*, const BindingInfo*>{ast, scope}}};
 }
 //---------------------------------------------------------------------------
-pair<const ast::AST*, const SemanticAnalysis::BindingInfo*> SemanticAnalysis::BindingInfo::lookupArgument(const string& name) const
+void SemanticAnalysis::BindingInfo::registerSymbolArgument(const string& name, const string& symbol)
+// Register a symbol argument
+{
+   arguments[name] = ArgumentInformation{{symbol}};
+}
+//---------------------------------------------------------------------------
+SemanticAnalysis::BindingInfo::ArgumentInformation SemanticAnalysis::BindingInfo::lookupArgument(const string& name) const
 // Check for an argument
 {
    if (auto iter = arguments.find(name); iter != arguments.end())
       return iter->second;
-   return {nullptr, nullptr};
+   return {};
 }
 //---------------------------------------------------------------------------
 void SemanticAnalysis::BindingInfo::join(const BindingInfo& other)
@@ -252,6 +258,14 @@ void SemanticAnalysis::BindingInfo::join(const BindingInfo& other)
          s2.ambiguous = true;
       }
    }
+   for (auto& a : other.aliases)
+      if (!aliases.count(a.first)) {
+         aliases.insert(a);
+      } else {
+         auto& a2 = aliases[a.first];
+         a2.columns.clear();
+         a2.ambiguous = true;
+      }
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult::ExpressionResult(unique_ptr<algebra::Expression> expression, OrderingInfo ordering)
@@ -289,10 +303,22 @@ string SemanticAnalysis::extractString(const ast::AST* token)
    return ast::Token::ref(token).asString();
 }
 //---------------------------------------------------------------------------
-string SemanticAnalysis::extractSymbol(const ast::AST* token)
+string SemanticAnalysis::extractRawSymbol(const ast::AST* token)
 // Extract a symbol name
 {
    return getInternalName(ast::Token::ref(token).asString());
+}
+//---------------------------------------------------------------------------
+string SemanticAnalysis::extractSymbol(const BindingInfo& scope, const ast::AST* token)
+// Extract a symbol name
+{
+   string name = extractRawSymbol(token);
+   for (auto iter = &scope; iter; iter = iter->parentScope) {
+      auto iter2 = iter->arguments.find(name);
+      if (iter2 != iter->arguments.end() && (iter2->second.isSymbol()))
+         return iter2->second.getSymbol();
+   }
+   return name;
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeQuery(const ast::AST* query)
@@ -333,7 +359,7 @@ string SemanticAnalysis::recognizeGensym(const ast::AST* ast)
       }
    }
 
-   return " " + name + to_string(nextSymbolId++);
+   return " " + name + " " + to_string(nextSymbolId++);
 }
 //---------------------------------------------------------------------------
 static Type inferDecimalType(SemanticAnalysis& semana, const string& s) {
@@ -377,9 +403,9 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeLiteral(const ast::L
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAccess(const BindingInfo& scope, const ast::Access& ast)
 // Analyze access
 {
-   auto name = extractSymbol(ast.part);
+   auto name = extractSymbol(scope, ast.part);
    if (ast.base->getType() != ast::AST::Type::Token) reportError("invalid access to column '" + name + "'");
-   auto base = extractSymbol(ast.base);
+   auto base = extractSymbol(scope, ast.base);
 
    auto iu = scope.lookup(base, name);
    if (iu == BindingInfo::ambiguousIU) reportError("'" + name + "' is ambiguous");
@@ -505,7 +531,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeJoin(const BindingIn
    algebra::Join::JoinType joinType = algebra::Join::JoinType::Inner;
    bool leftOnly = false, rightOnly = false;
    if (args[2]) {
-      string jt = symbolArgument("join", "type", args[2]);
+      string jt = symbolArgument(scope, "join", "type", args[2]);
       if (jt == "inner") {
          joinType = algebra::Join::JoinType::Inner;
       } else if ((jt == "left") || (jt == "leftouter")) {
@@ -565,6 +591,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeGroupBy(ExpressionRe
    vector<algebra::GroupBy::Aggregation> aggregates;
    vector<algebra::Map::Entry> results;
    BindingInfo resultBinding;
+   resultBinding.parentScope = input.getBinding().parentScope;
    auto scope = resultBinding.addScope("groupby");
    if (args[0]) {
       auto g = expressionListArgument(input.getBinding(), args[0]);
@@ -632,6 +659,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeAggregate(Expression
    // Prepare the grouping information
    vector<algebra::GroupBy::Aggregation> aggregates;
    BindingInfo resultBinding;
+   resultBinding.parentScope = input.getBinding().parentScope;
 
    // Compute aggregate
    BindingInfo::GroupByScope gbs(resultBinding, input.getBinding(), aggregates);
@@ -651,6 +679,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeDistinct(ExpressionR
    vector<algebra::GroupBy::Entry> groupBy;
    vector<algebra::GroupBy::Aggregation> aggregates;
    BindingInfo resultBinding;
+   resultBinding.parentScope = input.getBinding().parentScope;
    auto scope = resultBinding.addScope("distinct");
    for (auto& c : input.accessBinding().columns) {
       groupBy.push_back(algebra::GroupBy::Entry{make_unique<algebra::IURef>(c.iu), make_unique<algebra::IU>(c.iu->getType())});
@@ -689,6 +718,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeSetOperation(const B
 
    // Check that the schema matches
    BindingInfo result;
+   result.parentScope = &scope;
    auto resultScope = result.addScope(name);
    if (input.getBinding().columns.size() != other.getBinding().columns.size()) reportError("'"s + name + "' requires tables with identical schema");
    vector<unique_ptr<algebra::Expression>> leftColumns, rightColumns;
@@ -724,6 +754,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult
 
    // Make expressions visible
    BindingInfo resultBinding;
+   resultBinding.parentScope = input.getBinding().parentScope;
    if (!project) resultBinding = move(input.getBinding());
    auto scope = resultBinding.addScope(name);
    unsigned slot = 0;
@@ -939,12 +970,13 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCast(const BindingIn
    return ExpressionResult(make_unique<algebra::CastExpression>(move(value.scalar()), type.getBasicType()), value.getOrdering());
 }
 //---------------------------------------------------------------------------
-string SemanticAnalysis::symbolArgument(const string& funcName, const string& argName, const ast::FuncArg* arg)
+string SemanticAnalysis::symbolArgument(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
 // Handle a symbol argument
 {
    if (arg->getSubType() != ast::FuncArg::SubType::Flat) reportError("parameter '" + argName + "' requires a symbol in call to '" + funcName + "'");
+   if (auto s = recognizeGensym(arg->value); !s.empty()) return s;
    if (arg->value->getType() != ast::AST::Type::Token) reportError("parameter '" + argName + "' requires a symbol in call to '" + funcName + "'");
-   return extractSymbol(arg->value);
+   return extractSymbol(scope, arg->value);
 }
 //---------------------------------------------------------------------------
 bool SemanticAnalysis::constBoolArgument(const string& funcName, const string& argName, const ast::FuncArg* arg)
@@ -1009,22 +1041,21 @@ vector<SemanticAnalysis::ExpressionArg> SemanticAnalysis::expressionListArgument
 // Handle expression list arguments
 {
    // Accept alias variables as convenience feature
-   auto recognizeAliasVar=[&](const ast::AST* ast) -> const vector<const algebra::IU*>* {
-      if ((!ast)||(ast->getType()!=ast::AST::Type::Token)) return nullptr;
+   auto recognizeAliasVar = [&](const ast::AST* ast) -> const vector<const algebra::IU*>* {
+      if ((!ast) || (ast->getType() != ast::AST::Type::Token)) return nullptr;
 
-      auto name = extractSymbol(ast);
+      auto name = extractSymbol(scope, ast);
 
       // A column reference?
       if (scope.columnLookup.contains(name)) return nullptr;
 
       // An alias reference?
-      if (auto iter = scope.aliases.find(name);iter!=scope.aliases.end()) {
+      if (auto iter = scope.aliases.find(name); iter != scope.aliases.end()) {
          if (iter->second.ambiguous) reportError("'" + name + "' is ambiguous");
          return &(iter->second.columns);
       }
       return nullptr;
    };
-
 
    vector<SemanticAnalysis::ExpressionArg> result;
    // As convenience feature we also support single expressions
@@ -1034,14 +1065,17 @@ vector<SemanticAnalysis::ExpressionArg> SemanticAnalysis::expressionListArgument
       for (auto& a : TypedList<ast::FuncArgNamed>(arg->value)) {
          if (a.getSubType() != ast::FuncArgNamed::SubType::Flat) reportError("nested expression list not allowed here");
          if (auto ac = recognizeAliasVar(a.value)) {
-            for (auto e:*ac) {
-               result.push_back({{}, ExpressionResult(make_unique<algebra::IURef>(e), OrderingInfo::defaultOrder())});
+            unordered_map<const algebra::IU*, string> names;
+            for (auto& c : scope.columns)
+               names[c.iu] = c.name;
+            for (auto e : *ac) {
+               result.push_back({names[e], ExpressionResult(make_unique<algebra::IURef>(e), OrderingInfo::defaultOrder())});
             }
          } else {
             auto e = analyzeExpression(scope, a.value);
             string name;
             if (a.name)
-               name = extractSymbol(a.name);
+               name = extractSymbol(scope, a.name);
             else
                name = inferName(a.value);
             result.push_back({move(name), move(e)});
@@ -1141,7 +1175,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
             args.resize(sig->arguments.size(), nullptr);
             hadNamed = true;
          }
-         auto argName = extractSymbol(a.name);
+         auto argName = extractSymbol(scope, a.name);
          auto iter = find_if(sig->arguments.begin(), sig->arguments.end(), [&](auto& c) { return c.name == argName; });
          if (iter == sig->arguments.end()) reportError("parameter '" + argName + "' not found in call to '" + name + "'");
          auto slot = iter - sig->arguments.begin();
@@ -1164,8 +1198,20 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       BindingInfo callScope;
       for (unsigned index = 0, limit = sig->arguments.size(); index != limit; ++index) {
          auto val = args[index] ? args[index]->value : let.defaultValues[index];
-         bool isExpression = sig->arguments[index].type.category == Functions::TypeCategory::Expression;
-         callScope.registerArgument(sig->arguments[index].name, val, isExpression ? nullptr : &scope);
+         switch (sig->arguments[index].type.category) {
+            case Functions::TypeCategory::Expression: callScope.registerArgument(sig->arguments[index].name, val, nullptr); break;
+            case Functions::TypeCategory::Table: callScope.registerArgument(sig->arguments[index].name, val, &scope); break;
+            case Functions::TypeCategory::Symbol: {
+               string sn = recognizeGensym(val);
+               if (sn.empty()) {
+                  if (val->getType() != ast::AST::Type::Token) reportError("parameter '" + sig->arguments[index].name + "' requires a symbol in call to '" + name + "'");
+                  sn = extractSymbol(scope, val);
+               }
+               callScope.registerSymbolArgument(sig->arguments[index].name, sn);
+               break;
+            }
+            default: invalidAST();
+         }
       }
       auto res = analyzeExpression(callScope, let.body);
       if (res.isTable()) res.accessBinding().parentScope = nullptr;
@@ -1209,7 +1255,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
    switch (sig->builtin) {
       case Builtin::Asc: base->accessOrdering().markAscending(); return move(*base);
       case Builtin::Desc: base->accessOrdering().markDescending(); return move(*base);
-      case Builtin::Collate: base->accessOrdering().setCollate(OrderingInfo::lookupCollate(symbolArgument(name, sig->arguments[0].name, args[0]))); return move(*base);
+      case Builtin::Collate: base->accessOrdering().setCollate(OrderingInfo::lookupCollate(symbolArgument(scope, name, sig->arguments[0].name, args[0]))); return move(*base);
       case Builtin::Is: {
          auto arg = scalarArgument(scope, name, sig->arguments[0].name, args[0]);
          enforceComparable(*base, arg);
@@ -1256,7 +1302,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          return ExpressionResult(make_unique<algebra::SubstrExpression>(move(base->scalar()), move(from), move(len)), OrderingInfo::defaultOrder());
       }
       case Builtin::Extract: {
-         auto partName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         auto partName = symbolArgument(scope, name, sig->arguments[0].name, args[0]);
          algebra::ExtractExpression::Part part;
          if (partName == "year") {
             part = algebra::ExtractExpression::Part::Year;
@@ -1296,19 +1342,19 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::Case: return analyzeCase(scope, args);
       case Builtin::As: {
          auto& b = base->accessBinding();
-         auto newName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         auto newName = symbolArgument(scope, name, sig->arguments[0].name, args[0]);
          b.scopes.clear();
          b.scopes[newName].columns = b.columnLookup;
          return move(*base);
       }
       case Builtin::Alias: {
          auto& b = base->accessBinding();
-         auto newName = symbolArgument(name, sig->arguments[0].name, args[0]);
+         auto newName = symbolArgument(scope, name, sig->arguments[0].name, args[0]);
          auto& a = b.aliases[newName];
-         a.ambiguous=false;
+         a.ambiguous = false;
          a.columns.clear();
          a.columns.reserve(b.columns.size());
-         for (auto& c:b.columns) a.columns.push_back(c.iu);
+         for (auto& c : b.columns) a.columns.push_back(c.iu);
          return move(*base);
       }
       case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
@@ -1328,7 +1374,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeTableConstruction(co
       for (auto& arg : TypedList<ast::FuncArgNamed>(row.value)) {
          if (arg.getSubType() != ast::FuncArgNamed::SubType::Flat) reportError("'table' requires a tuple list");
          if (arg.name) {
-            columnNames.push_back(extractSymbol(arg.name));
+            columnNames.push_back(extractSymbol(scope, arg.name));
          } else {
             columnNames.push_back(to_string(columnNames.size() + 1));
          }
@@ -1426,7 +1472,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCase(const BindingIn
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingInfo& scope, const ast::AST* exp)
 // Analyze a token
 {
-   auto name = extractSymbol(exp);
+   auto name = extractSymbol(scope, exp);
 
    // A column reference?
    if (auto iu = scope.lookup(name)) {
@@ -1436,8 +1482,10 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingI
 
    // An argument?
    for (auto iter = &scope; iter; iter = iter->parentScope) {
-      if (auto arg = iter->lookupArgument(name); arg.first) {
-         return analyzeExpression(arg.second ? *arg.second : scope, arg.first);
+      if (auto arg = iter->lookupArgument(name); arg.isValue()) {
+         auto res = analyzeExpression(arg.getValueScope() ? *arg.getValueScope() : scope, arg.getValueRef());
+         if (res.isTable()) res.accessBinding().parentScope = &scope;
+         return res;
       }
    }
 
@@ -1490,14 +1538,14 @@ void SemanticAnalysis::analyzeLet(const ast::LetEntry& ast)
    if (ast.args) {
       unordered_set<string> argNames;
       for (auto& a : TypedList<ast::LetArg>(ast.args)) {
-         auto name = extractSymbol(a.name);
+         auto name = extractRawSymbol(a.name);
          if (argNames.contains(name)) reportError("duplicate function argument '" + name + "'");
          argNames.insert(name);
          Functions::ArgumentType argType = Functions::TypeCategory::Scalar;
          if (a.type) {
             auto& at = ast::Type::ref(a.type);
             if (at.getSubType() != ast::Type::SubType::Simple) reportError("complex argument types not implemented yet");
-            auto tn = extractSymbol(at.name);
+            auto tn = extractRawSymbol(at.name);
             if (tn == "table") {
                argType = Functions::TypeCategory::Table;
             } else if (tn == "expression") {
@@ -1514,7 +1562,7 @@ void SemanticAnalysis::analyzeLet(const ast::LetEntry& ast)
    }
 
    // Register the let
-   auto name = extractSymbol(ast.name);
+   auto name = extractRawSymbol(ast.name);
    if (letLookup.contains(name)) reportError("duplicate let '" + name + "'");
    lets.emplace_back(Functions::Signature({}, move(args)), move(defaultValues), ast.body);
    letLookup[name] = lets.size() - 1;

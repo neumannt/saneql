@@ -1,0 +1,10 @@
+let semijoin(preserve table, probe table, p expression, x symbol := gensym(x), y symbol :=gensym(y)) :=
+   preserve
+   .window({x:=row_number()})
+   .alias(y)
+   .join(probe, p)
+   .project({y})
+   .distinct()
+   .projectout({x}),
+semijoin(nation, region.filter(r_name='ASIA'), n_regionkey=r_regionkey)
+
