@@ -1,0 +1,41 @@
+name: Build and Test
+on:
+  push:
+    # run when these files changed
+    paths:
+      - "**.h"
+      - "**.hpp"
+      - "**.cpp"
+      - "Makefile"
+      - ".github/workflows/test.yml"
+env:
+  # queries not working for me right now: 2, 18
+  tpch_queries: 1 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 19 21 22
+
+jobs:
+  test-query-compilation:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: install dependencies
+        run: |
+          sudo apt-get install -y build-essential gcc g++ bison flex
+
+      - name: checkout project
+        uses: actions/checkout@v3
+
+      - name: build saneql
+        run: |
+          make -j4 bin/saneql
+
+      - name: compile saneql tpch queries
+        run: |
+          for query in ${{ env.tpch_queries }}; do
+            bin/saneql examples/tpch/q$query.sane
+          done
+
+      - name: compile saneql feature examples
+        run: |
+          for example in $(ls examples/features); do
+            bin/saneql examples/features/$example
+          done
