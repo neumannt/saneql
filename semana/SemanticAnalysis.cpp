@@ -166,6 +166,11 @@ class SemanticAnalysis::BindingInfo::GroupByScope {
 //---------------------------------------------------------------------------
 const algebra::IU* const SemanticAnalysis::BindingInfo::ambiguousIU = reinterpret_cast<const algebra::IU*>(1);
 //---------------------------------------------------------------------------
+const SemanticAnalysis::BindingInfo& SemanticAnalysis::BindingInfo::rootScope() {
+   static BindingInfo root;
+   return root;
+}
+//---------------------------------------------------------------------------
 SemanticAnalysis::BindingInfo::Scope* SemanticAnalysis::BindingInfo::addScope(const string& name)
 // Add a new scope, mark it as ambiguous if it already exists
 {
@@ -332,8 +337,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeQuery(const ast::AST
          analyzeLet(l);
    }
 
-   BindingInfo emptyScope;
-   return analyzeExpression(emptyScope, qb.body);
+   return analyzeExpression(BindingInfo::rootScope(), qb.body);
 }
 //---------------------------------------------------------------------------
 string SemanticAnalysis::recognizeGensym(const ast::AST* ast)
@@ -1494,8 +1498,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingI
       auto& l = lets[iter->second];
       if (!l.signature.arguments.empty()) reportError("'" + name + "' is a function");
       SetLetScopeLimit setLetScopeLimit(this, iter->second);
-      BindingInfo callScope;
-      return analyzeExpression(callScope, l.body);
+      return analyzeExpression(BindingInfo::rootScope(), l.body);
    }
 
    // Table scan?

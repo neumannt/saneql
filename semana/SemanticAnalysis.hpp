@@ -139,6 +139,9 @@ class SemanticAnalysis {
       /// Marker for ambiguous IUs
       static const algebra::IU* const ambiguousIU;
 
+      /// Constant (empty) root scope
+      static const BindingInfo& rootScope();
+
       /// Access all columns
       const auto& getColumns() const { return columns; }
       /// Add a new scope, mark it as ambiguous if it already exists
