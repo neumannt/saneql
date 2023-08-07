@@ -1204,6 +1204,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          auto val = args[index] ? args[index]->value : let.defaultValues[index];
          switch (sig->arguments[index].type.category) {
             case Functions::TypeCategory::Expression: callScope.registerArgument(sig->arguments[index].name, val, nullptr); break;
+            case Functions::TypeCategory::Scalar: callScope.registerArgument(sig->arguments[index].name, val, &scope); break;
             case Functions::TypeCategory::Table: callScope.registerArgument(sig->arguments[index].name, val, &scope); break;
             case Functions::TypeCategory::Symbol: {
                string sn = recognizeGensym(val);
