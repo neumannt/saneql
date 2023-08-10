@@ -2,6 +2,7 @@
 #define H_saneql_Expression
 //---------------------------------------------------------------------------
 #include "infra/Schema.hpp"
+#include "semana/Functions.hpp"
 #include <memory>
 //---------------------------------------------------------------------------
 // SaneQL
@@ -259,7 +260,7 @@ class SimpleCaseExpression : public Expression {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
-/// A dearched case expression
+/// A searched case expression
 class SearchedCaseExpression : public Expression {
    public:
    using Cases = SimpleCaseExpression::Cases;
@@ -339,6 +340,22 @@ class Aggregate : public Expression, public AggregationLike {
    Aggregate(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::unique_ptr<Expression> computation);
 
    // Generate SQL
+   void generate(SQLWriter& out) override;
+};
+//---------------------------------------------------------------------------
+/// A declaration
+class Declaration : public Expression {
+   private:
+   /// The name of the declared function
+   std::string name;
+   /// The arguments
+   std::vector<Expression> arguments;
+
+   public:
+   /// Constructor
+   Declaration(std::string name, Type returnType, std::vector<Expression> arguments);
+
+   /// Generate SQL
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
