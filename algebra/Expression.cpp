@@ -2,6 +2,7 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
 #include <algorithm>
+#include <utility>
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -292,6 +293,23 @@ void Aggregate::generate(SQLWriter& out)
       input->generate(out);
       out.write(" s");
       out.write(") s");
+   }
+   out.write(")");
+}
+//---------------------------------------------------------------------------
+Declaration::Declaration(string name, Type returnType, vector<Expression> arguments)
+   : Expression(returnType), name(std::move(name)), arguments(std::move(arguments))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void Declaration::generate(SQLWriter& out) {
+   out.write(name);
+   out.write("(");
+   bool first = true;
+   for (auto& a : arguments) {
+      out.write(std::exchange(first, false) ? ", " : "");
+      a.generate(out);
    }
    out.write(")");
 }
