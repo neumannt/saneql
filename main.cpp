@@ -26,8 +26,8 @@ static void readFile(const string& fileName, ostringstream& output) {
 static string readSaneQL(const string& saneqlFile, std::optional<string> dialectFile = {}) {
    ostringstream output;
    if (dialectFile) {
-      output << "\n";
       readFile(*dialectFile, output);
+      output << "\n";
    }
    readFile(saneqlFile, output);
    return output.str();
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
    Schema schema;
    schema.populateSchema();
 
-   string query = readSaneQL(argv[1], argc >= 3 ? argv[2] : std::make_optional<string>());
+   string query = readSaneQL(argv[1], argc >= 3 ? std::make_optional(argv[2]) : std::nullopt);
    ASTContainer container;
    ast::AST* tree = nullptr;
    try {

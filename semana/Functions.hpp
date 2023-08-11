@@ -48,7 +48,7 @@ class Functions {
       AggMax,
       WindowRowNumber,
       Table,
-      Declare
+      Funcall
    };
    /// Type category
    enum class TypeCategory {

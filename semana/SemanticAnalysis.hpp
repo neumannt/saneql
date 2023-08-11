@@ -272,6 +272,8 @@ class SemanticAnalysis {
    std::string extractRawSymbol(const ast::AST* token);
    /// Extract a symbol name
    std::string extractSymbol(const BindingInfo& scope, const ast::AST* token);
+   /// Parse a type string for a simple type
+   saneql::Type parseSimpleTypeName(const std::string& name);
    /// Analyze a type
    ExtendedType analyzeType(const ast::Type& type);
 
@@ -310,6 +312,8 @@ class SemanticAnalysis {
    std::string symbolArgument(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a constant boolean argument
    bool constBoolArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
+   /// Handle a constant string argument
+   std::string constStringArgument(const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a scalar argument
    ExpressionResult scalarArgument(const BindingInfo& scope, const std::string& funcName, const std::string& argName, const ast::FuncArg* arg);
    /// Handle a list of scalar arguments

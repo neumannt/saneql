@@ -947,20 +947,24 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeOrderBy(ExpressionRe
    return ExpressionResult(make_unique<algebra::Sort>(move(input.table()), move(order), limit, offset), move(input.accessBinding()));
 }
 //---------------------------------------------------------------------------
-SemanticAnalysis::ExtendedType SemanticAnalysis::analyzeType(const ast::Type& type)
-// Analyze a cast expression
-{
-   auto simpleType = [&](Type result) {
-      if (type.getSubType() != ast::Type::SubType::Simple) reportError("invalid type syntax");
-      return ExtendedType(result);
-   };
-   auto name = extractString(type.name);
-   if (name == "integer") return simpleType(Type::getInteger());
-   if (name == "boolean") return simpleType(Type::getBool());
-   if (name == "date") return simpleType(Type::getDate());
-   if (name == "interval") return simpleType(Type::getInterval());
+saneql::Type SemanticAnalysis::parseSimpleTypeName(const string& name) {
+   if (name == "integer") return Type::getInteger();
+   if (name == "boolean") return Type::getBool();
+   if (name == "date") return Type::getDate();
+   if (name == "interval") return Type::getInterval();
    // XXX todo more types
    reportError("unknown type '" + name + "'");
+}
+//---------------------------------------------------------------------------
+SemanticAnalysis::ExtendedType SemanticAnalysis::analyzeType(const ast::Type& type)
+// Analyze a type expression
+{
+   auto name = extractString(type.name);
+   if (type.getSubType() == ast::Type::SubType::Simple) {
+      return ExtendedType(parseSimpleTypeName(name));
+   } else {
+      reportError("invalid type syntax");
+   }
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCast(const BindingInfo& scope, const ast::Cast& cast)
@@ -991,6 +995,17 @@ bool SemanticAnalysis::constBoolArgument(const string& funcName, const string& a
    auto& l = ast::Literal::ref(arg->value);
    if ((l.getSubType() != ast::Literal::SubType::True) && (l.getSubType() != ast::Literal::SubType::False)) reportError("parameter '" + argName + "' requires a boolean constant in call to '" + funcName + "'");
    return (l.getSubType() == ast::Literal::SubType::True);
+}
+//---------------------------------------------------------------------------
+std::string SemanticAnalysis::constStringArgument(const string& funcName, const string& argName, const ast::FuncArg* arg)
+// Handle a const bool argument
+{
+   auto reportTypeError = [&]() { reportError("parameter '" + argName + "' requires a string constant in call to '" + funcName + "'"); };
+   if (arg->getSubType() != ast::FuncArg::SubType::Flat) reportTypeError();
+   if (arg->value->getType() != ast::AST::Type::Literal) reportTypeError();
+   auto& l = ast::Literal::ref(arg->value);
+   if (l.getSubType() != ast::Literal::SubType::String) reportTypeError();
+   return extractString(l.arg);
 }
 //---------------------------------------------------------------------------
 SemanticAnalysis::ExpressionResult SemanticAnalysis::scalarArgument(const BindingInfo& scope, const string& funcName, const string& argName, const ast::FuncArg* arg)
@@ -1363,6 +1378,19 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          return move(*base);
       }
       case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
+         // return ExpressionResult(make_unique<algebra::Select>(move(base->table()), move(cond.scalar())), move(base->accessBinding()));
+      case Builtin::Funcall: {
+         auto functionName = constStringArgument("funcall", sig->arguments[0].name, args[0]);
+         auto returnType = parseSimpleTypeName(symbolArgument(scope, name, sig->arguments[1].name, args[1]));
+         auto analyzedArgs = expressionListArgument(scope, args[2]);
+         std::vector<std::unique_ptr<algebra::Expression>> functionArgs;
+         for (auto& r : analyzedArgs) {
+            auto& v = r.value;
+            if (!v.isScalar()) reportError("funcall arguments must be scalar");
+            functionArgs.push_back(move(v.scalar()));
+         }
+         return ExpressionResult(make_unique<algebra::Funcall>(move(functionName), move(returnType), move(functionArgs)), OrderingInfo::defaultOrder());
+      }
    }
 
    reportError("call not implemented yet");
