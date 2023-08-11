@@ -297,21 +297,38 @@ void Aggregate::generate(SQLWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
-Funcall::Funcall(string name, Type returnType, vector<unique_ptr<Expression>> arguments)
-   : Expression(returnType), name(std::move(name)), arguments(std::move(arguments))
+Funcall::Funcall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)
+   : Expression(returnType), name(std::move(name)), arguments(std::move(arguments)), callType(callType)
 // Constructor
 {
 }
 //---------------------------------------------------------------------------
 void Funcall::generate(SQLWriter& out) {
-   out.write(name);
-   out.write("(");
-   bool first = true;
-   for (auto& a : arguments) {
-      out.write(std::exchange(first, false) ? "" : ", ");
-      a->generate(out);
+   switch (callType) {
+      case CallType::Function: {
+         out.write(name);
+         out.write("(");
+         bool first = true;
+         for (auto& a : arguments) {
+            if(!std::exchange(first, false)) out.write(", ");
+            a->generate(out);
+         }
+         out.write(")");
+         break;
+      }
+      case CallType::Operator: {
+         bool first = true;
+         for (auto& a : arguments) {
+            if (!std::exchange(first, false)) {
+               out.write(" ");
+               out.write(name);
+               out.write(" ");
+            }
+            a->generateOperand(out);
+         }
+         break;
+      }
    }
-   out.write(")");
 }
 //---------------------------------------------------------------------------
 }

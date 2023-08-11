@@ -344,16 +344,22 @@ class Aggregate : public Expression, public AggregationLike {
 };
 //---------------------------------------------------------------------------
 /// A declaration
-class Funcall : public Expression {
+struct Funcall : public Expression {
+   // Type of the generated call
+   enum class CallType { Function, Operator };
+   static constexpr CallType defaultType() { return CallType::Function; }
+
    private:
    /// The name of the declared function
    std::string name;
-   /// The arguments
+   /// The function call arguments
    std::vector<std::unique_ptr<Expression>> arguments;
+   /// The call type
+   CallType callType;
 
    public:
    /// Constructor
-   Funcall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments);
+   Funcall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments, CallType callType);
 
    /// Generate SQL
    void generate(SQLWriter& out) override;
