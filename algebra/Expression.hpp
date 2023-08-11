@@ -344,16 +344,16 @@ class Aggregate : public Expression, public AggregationLike {
 };
 //---------------------------------------------------------------------------
 /// A declaration
-class Declaration : public Expression {
+class Funcall : public Expression {
    private:
    /// The name of the declared function
    std::string name;
    /// The arguments
-   std::vector<Expression> arguments;
+   std::vector<std::unique_ptr<Expression>> arguments;
 
    public:
    /// Constructor
-   Declaration(std::string name, Type returnType, std::vector<Expression> arguments);
+   Funcall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments);
 
    /// Generate SQL
    void generate(SQLWriter& out) override;
