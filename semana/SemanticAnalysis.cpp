@@ -952,6 +952,7 @@ saneql::Type SemanticAnalysis::parseSimpleTypeName(const string& name) {
    if (name == "boolean") return Type::getBool();
    if (name == "date") return Type::getDate();
    if (name == "interval") return Type::getInterval();
+   if (name == "text") return Type::getText();
    // XXX todo more types
    reportError("unknown type '" + name + "'");
 }
@@ -1380,16 +1381,26 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
          // return ExpressionResult(make_unique<algebra::Select>(move(base->table()), move(cond.scalar())), move(base->accessBinding()));
       case Builtin::Funcall: {
+         using CallType = algebra::Funcall::CallType;
          auto functionName = constStringArgument("funcall", sig->arguments[0].name, args[0]);
          auto returnType = parseSimpleTypeName(symbolArgument(scope, name, sig->arguments[1].name, args[1]));
-         auto analyzedArgs = expressionListArgument(scope, args[2]);
          std::vector<std::unique_ptr<algebra::Expression>> functionArgs;
-         for (auto& r : analyzedArgs) {
-            auto& v = r.value;
-            if (!v.isScalar()) reportError("funcall arguments must be scalar");
-            functionArgs.push_back(move(v.scalar()));
+         if (args[2]) { // function arguments
+            auto analyzedArgs = expressionListArgument(scope, args[2]);
+            for (auto& r : analyzedArgs) {
+               auto& v = r.value;
+               if (!v.isScalar()) reportError("funcall arguments must be scalar");
+               functionArgs.push_back(move(v.scalar()));
+            }
          }
-         return ExpressionResult(make_unique<algebra::Funcall>(move(functionName), move(returnType), move(functionArgs)), OrderingInfo::defaultOrder());
+         CallType callType = algebra::Funcall::defaultType();
+         if (args[3]) { // type specifier
+            string readType = symbolArgument(scope, name, sig->arguments[3].name, args[3]);
+            if (readType == "function") callType = CallType::Function;
+            else if (readType == "operator") callType = CallType::Operator;
+            else reportError("unknown funcall call type '" + readType + "'");
+         }
+         return ExpressionResult(make_unique<algebra::Funcall>(move(functionName), move(returnType), move(functionArgs), callType), OrderingInfo::defaultOrder());
       }
    }
 

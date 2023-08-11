@@ -1,1 +1,2 @@
-let julianday(start date, modifier text) := declare('julianday', {start, modifier}),
+let date(spec, modifier expression := '+0 seconds') := funcall('date', date, {spec, modifier}),
+let concat(string1, string2) := funcall('||', text, {string1, string2}),
