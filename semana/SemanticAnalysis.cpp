@@ -1397,7 +1397,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          if (args[3]) { // type specifier
             string readType = symbolArgument(scope, name, sig->arguments[3].name, args[3]);
             if (readType == "function") callType = CallType::Function;
-            else if (readType == "operator") callType = CallType::LeftAssocOperator;
+            else if (readType == "operator" || readType == "leftassoc") callType = CallType::LeftAssocOperator;
             else if (readType == "rightassoc") callType = CallType::RightAssocOperator;
             else reportError("unknown funcall call type '" + readType + "'");
          }
