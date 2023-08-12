@@ -346,7 +346,7 @@ class Aggregate : public Expression, public AggregationLike {
 /// A declaration
 struct Funcall : public Expression {
    // Type of the generated call
-   enum class CallType { Function, Operator };
+   enum class CallType { Function, LeftAssocOperator, RightAssocOperator };
    static constexpr CallType defaultType() { return CallType::Function; }
 
    private:
