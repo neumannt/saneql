@@ -1397,8 +1397,12 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
          if (args[3]) { // type specifier
             string readType = symbolArgument(scope, name, sig->arguments[3].name, args[3]);
             if (readType == "function") callType = CallType::Function;
-            else if (readType == "operator") callType = CallType::Operator;
+            else if (readType == "operator") callType = CallType::LeftAssocOperator;
+            else if (readType == "rightassoc") callType = CallType::RightAssocOperator;
             else reportError("unknown funcall call type '" + readType + "'");
+         }
+         if (callType == CallType::LeftAssocOperator || callType == CallType::RightAssocOperator) {
+            if (functionArgs.size() < 2) reportError("funcall with operator type requires at least two arguments");
          }
          return ExpressionResult(make_unique<algebra::Funcall>(move(functionName), move(returnType), move(functionArgs), callType), OrderingInfo::defaultOrder());
       }

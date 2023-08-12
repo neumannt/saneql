@@ -316,15 +316,34 @@ void Funcall::generate(SQLWriter& out) {
          out.write(")");
          break;
       }
-      case CallType::Operator: {
-         bool first = true;
-         for (auto& a : arguments) {
-            if (!std::exchange(first, false)) {
+      case CallType::LeftAssocOperator: { // ((a op b) op c) op d
+         for (auto i = 0u; i != arguments.size() - 2; ++i) {
+            out.write("(");
+         }
+         arguments[0]->generateOperand(out);
+         for (auto i = 1u; i != arguments.size(); ++i) {
+            out.write(" ");
+            out.write(name);
+            out.write(" ");
+            arguments[i]->generateOperand(out);
+            if (i != arguments.size() - 1) {
+               out.write(")");
+            }
+         }
+         break;
+      }
+      case CallType::RightAssocOperator: { // a op (b op (c op d))
+         for (auto i = 0u; i != arguments.size(); ++i) {
+            arguments[i]->generateOperand(out);
+            if (i != arguments.size() - 1) {
                out.write(" ");
                out.write(name);
                out.write(" ");
+               out.write("(");
             }
-            a->generateOperand(out);
+         }
+         for (auto i = 0u; i != arguments.size() - 2; ++i) {
+            out.write(")");
          }
          break;
       }
