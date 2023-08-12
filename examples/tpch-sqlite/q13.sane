@@ -1,0 +1,6 @@
+customer
+.join(orders.filter(!o_comment.like('%special%requests%')), c_custkey=o_custkey, type:=leftouter)
+.groupby({c_custkey}, {c_count:=count(o_orderkey)})
+.groupby({c_count}, {custdist:=count()})
+.orderby({custdist.desc(), c_count.desc()})
+

@@ -1,0 +1,8 @@
+let partsupp_germany := partsupp
+   .join(supplier, ps_suppkey=s_suppkey)
+   .join(nation.filter(n_name='GERMANY'), s_nationkey=n_nationkey),
+partsupp_germany
+.groupby(ps_partkey, {value:=sum(ps_supplycost * ps_availqty)})
+.filter(value>partsupp_germany.aggregate(sum(ps_supplycost*ps_availqty))*0.0001)
+.orderby(value.desc())
+

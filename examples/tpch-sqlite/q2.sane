@@ -1,0 +1,16 @@
+let min_supplycost_for_part(p_partkey) :=
+   partsupp
+   .filter(ps_partkey = p_partkey)
+   .join(supplier, s_suppkey=ps_suppkey)
+   .join(nation, s_nationkey=n_nationkey)
+   .join(region.filter(r_name='EUROPE'), n_regionkey=r_regionkey).aggregate(min(ps_supplycost)),
+part
+.filter(condition:=p_size = 15 && p_type.like('%BRASS'))
+.join(partsupp, p_partkey = ps_partkey)
+.join(supplier, s_suppkey = ps_suppkey)
+.join(nation, s_nationkey = n_nationkey)
+.join(region.filter(r_name='EUROPE'), n_regionkey=r_regionkey)
+.filter(ps_supplycost = min_supplycost_for_part(p_partkey))
+.orderby({s_acctbal.desc(), n_name, s_name, p_partkey}, limit:=100)
+.project({s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment})
+

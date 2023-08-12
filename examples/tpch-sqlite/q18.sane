@@ -1,0 +1,7 @@
+customer
+.join(orders, c_custkey=o_custkey)
+.join(lineitem.groupby({l_orderkey}, {s:=sum(l_quantity)}).filter(s>300), o_orderkey=l_orderkey, type:=leftsemi)
+.join(lineitem, o_orderkey=l_orderkey)
+.groupby({c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice}, {s:=sum(l_quantity)})
+.orderby({o_totalprice.desc(), o_orderdate}, limit:=100)
+

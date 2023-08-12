@@ -1,0 +1,13 @@
+let base := '1996-01-01',
+let basedate(add := '+0 seconds') := funcall('date', date, {base, add}),
+let revenue:=
+   lineitem
+   .filter(l_shipdate >= basedate() && l_shipdate < basedate('+3 months'))
+   .groupby(l_suppkey, {total_revenue:=sum(l_extendedprice * (1 - l_discount))})
+   .project({supplier_no:=l_suppkey, total_revenue}),
+supplier
+.join(revenue, s_suppkey = supplier_no)
+.filter(total_revenue=revenue.aggregate(max(total_revenue)))
+.orderby({s_suppkey})
+.project({s_suppkey, s_name, s_address, s_phone, total_revenue})
+
