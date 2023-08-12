@@ -1,0 +1,10 @@
+let base := '1993-10-01',
+let basedate(add := '+0 seconds') := funcall('date', date, {base, add}),
+orders
+.filter(o_orderdate >= basedate() && o_orderdate < basedate(add := '+3 months'))
+.join(customer, c_custkey=o_custkey)
+.join(lineitem.filter(l_returnflag='R'), l_orderkey=o_orderkey)
+.join(nation, c_nationkey=n_nationkey)
+.groupby({c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
+.orderby({revenue.desc()}, limit:=20)
+

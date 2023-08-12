@@ -1,0 +1,9 @@
+supplier
+.join(lineitem.filter(l_receiptdate>l_commitdate).as(l1), s_suppkey=l1.l_suppkey)
+.join(orders.filter(o_orderstatus = 'F'), o_orderkey = l1.l_orderkey)
+.join(nation.filter(n_name = 'SAUDI ARABIA'), s_nationkey = n_nationkey)
+.join(lineitem.as(l2), l2.l_orderkey = l1.l_orderkey && l2.l_suppkey <> l1.l_suppkey, type:=leftsemi)
+.join(lineitem.as(l3), l3.l_orderkey = l1.l_orderkey && l3.l_suppkey <> l1.l_suppkey && l3.l_receiptdate > l3.l_commitdate, type:=leftanti)
+.groupby({s_name}, {numwait:=count()})
+.orderby({numwait.desc(), s_name}, limit:=100)
+

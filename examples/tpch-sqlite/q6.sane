@@ -1,0 +1,4 @@
+let date(spec, modifier := '+0 seconds') := funcall('date', date, {spec, modifier}),
+lineitem
+.filter(l_shipdate >= date('1994-01-01') && l_shipdate < date('1994-01-01', '+1 year') && l_discount.between(0.06 - 0.01, 0.06 + 0.01) && l_quantity<24)
+.aggregate(sum(l_extendedprice * l_discount))

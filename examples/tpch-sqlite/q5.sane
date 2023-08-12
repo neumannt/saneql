@@ -1,6 +1,6 @@
--- gives the wrong result?
+let date(spec, modifier := '+0 seconds') := funcall('date', date, {spec, modifier}),
 customer
-.join(orders.filter(o_orderdate >= '1994-01-01'::date && o_orderdate < '1994-01-01'::date + '1 year'::interval), c_custkey=o_custkey)
+.join(orders.filter(o_orderdate >= date('1994-01-01') && o_orderdate < date('1994-01-01', '+1 year')), c_custkey=o_custkey)
 .join(lineitem, l_orderkey=o_orderkey)
 .join(supplier, l_suppkey=s_suppkey)
 .join(nation, s_nationkey=n_nationkey)
