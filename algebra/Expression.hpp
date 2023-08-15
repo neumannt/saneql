@@ -343,8 +343,8 @@ class Aggregate : public Expression, public AggregationLike {
    void generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
-/// A declaration
-struct Funcall : public Expression {
+/// A foreign call expression
+struct ForeignCall : public Expression {
    // Type of the generated call
    enum class CallType { Function, LeftAssocOperator, RightAssocOperator };
    static constexpr CallType defaultType() { return CallType::Function; }
@@ -359,7 +359,7 @@ struct Funcall : public Expression {
 
    public:
    /// Constructor
-   Funcall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments, CallType callType);
+   ForeignCall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments, CallType callType);
 
    /// Generate SQL
    void generate(SQLWriter& out) override;

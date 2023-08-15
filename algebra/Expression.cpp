@@ -297,13 +297,13 @@ void Aggregate::generate(SQLWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
-Funcall::Funcall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)
+ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)
    : Expression(returnType), name(std::move(name)), arguments(std::move(arguments)), callType(callType)
 // Constructor
 {
 }
 //---------------------------------------------------------------------------
-void Funcall::generate(SQLWriter& out) {
+void ForeignCall::generate(SQLWriter& out) {
    switch (callType) {
       case CallType::Function: {
          out.write(name);

@@ -1,5 +1,5 @@
 let base:='1995-09-01',
-let basedate(add := '+0 seconds') := funcall('date', date, {base, add}),
+let basedate(add := '+0 seconds') := foreigncall('date', date, {base, add}),
 lineitem
 .filter(l_shipdate >= basedate() && l_shipdate < basedate(add := '+1 month'))
 .join(part, l_partkey=p_partkey)

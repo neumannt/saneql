@@ -48,7 +48,7 @@ class Functions {
       AggMax,
       WindowRowNumber,
       Table,
-      Funcall
+      ForeignCall
    };
    /// Type category
    enum class TypeCategory {

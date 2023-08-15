@@ -1,5 +1,5 @@
-let date(spec) := funcall('date', date, {spec}),
-let extractYear(date) := funcall('strftime', text, {'%Y', date})::integer,
+let date(spec) := foreigncall('date', date, {spec}),
+let extractYear(date) := foreigncall('strftime', text, {'%Y', date})::integer,
 part
 .filter(p_type = 'ECONOMY ANODIZED STEEL')
 .join(lineitem, p_partkey=l_partkey)

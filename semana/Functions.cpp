@@ -74,7 +74,7 @@ const Functions Functions::freeFunctions(nullptr,
                                             {"table", {Builtin::Table, {{"values", TypeCategory::ExpressionList}}}}, // table construction
                                             {"case", {Builtin::Case, {{"cases", TypeCategory::ExpressionList}, {"else", TypeCategory::Expression, true}, {"search", TypeCategory::Scalar, true}}}}, // case expression
                                             {"gensym", {Builtin::Gensym, {{"name", TypeCategory::Symbol, true}}}}, // create a unique symbol
-                                            {"funcall", {Builtin::Funcall, {{"name", Type::getText()}, {"returns", TypeCategory::Symbol}, {"arguments", TypeCategory::ExpressionList, true}, {"type", TypeCategory::Symbol, true}}}} // declare that a function with the given arguments exists
+                                            {"foreigncall", {Builtin::ForeignCall, {{"name", Type::getText()}, {"returns", TypeCategory::Symbol}, {"arguments", TypeCategory::ExpressionList, true}, {"type", TypeCategory::Symbol, true}}}} // declare that a function with the given arguments exists
                                          });
 //---------------------------------------------------------------------------
 Functions::Functions(const Functions* parent, std::initializer_list<std::pair<std::string, Signature>> signatures)

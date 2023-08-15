@@ -1380,31 +1380,31 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       }
       case Builtin::Gensym: reportError("gensym is currently only supported in binding contexts");
          // return ExpressionResult(make_unique<algebra::Select>(move(base->table()), move(cond.scalar())), move(base->accessBinding()));
-      case Builtin::Funcall: {
-         using CallType = algebra::Funcall::CallType;
-         auto functionName = constStringArgument("funcall", sig->arguments[0].name, args[0]);
+      case Builtin::ForeignCall: {
+         using CallType = algebra::ForeignCall::CallType;
+         auto functionName = constStringArgument("foreigncall", sig->arguments[0].name, args[0]);
          auto returnType = parseSimpleTypeName(symbolArgument(scope, name, sig->arguments[1].name, args[1]));
          std::vector<std::unique_ptr<algebra::Expression>> functionArgs;
          if (args[2]) { // function arguments
             auto analyzedArgs = expressionListArgument(scope, args[2]);
             for (auto& r : analyzedArgs) {
                auto& v = r.value;
-               if (!v.isScalar()) reportError("funcall arguments must be scalar");
+               if (!v.isScalar()) reportError("foreigncall arguments must be scalar");
                functionArgs.push_back(move(v.scalar()));
             }
          }
-         CallType callType = algebra::Funcall::defaultType();
+         CallType callType = algebra::ForeignCall::defaultType();
          if (args[3]) { // type specifier
             string readType = symbolArgument(scope, name, sig->arguments[3].name, args[3]);
             if (readType == "function") callType = CallType::Function;
             else if (readType == "operator" || readType == "leftassoc") callType = CallType::LeftAssocOperator;
             else if (readType == "rightassoc") callType = CallType::RightAssocOperator;
-            else reportError("unknown funcall call type '" + readType + "'");
+            else reportError("unknown foreigncall call type '" + readType + "'");
          }
          if (callType == CallType::LeftAssocOperator || callType == CallType::RightAssocOperator) {
-            if (functionArgs.size() < 2) reportError("funcall with operator type requires at least two arguments");
+            if (functionArgs.size() < 2) reportError("foreigncall with operator type requires at least two arguments");
          }
-         return ExpressionResult(make_unique<algebra::Funcall>(move(functionName), move(returnType), move(functionArgs), callType), OrderingInfo::defaultOrder());
+         return ExpressionResult(make_unique<algebra::ForeignCall>(move(functionName), move(returnType), move(functionArgs), callType), OrderingInfo::defaultOrder());
       }
    }
 

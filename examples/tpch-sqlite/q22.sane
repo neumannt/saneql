@@ -1,4 +1,4 @@
-let substr(str,from,len) := funcall('substr', text, {str,from,len}),
+let substr(str,from,len) := foreigncall('substr', text, {str,from,len}),
 let avg_for_selected :=
    customer
    .filter(c_acctbal > 0.00 && substr(c_phone,1,2).in({'13', '31', '23', '29', '30', '18', '17'}))
