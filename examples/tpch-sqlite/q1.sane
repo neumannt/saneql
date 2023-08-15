@@ -1,4 +1,4 @@
-let date(spec, modifier) := funcall('date', date, {spec, modifier}),
+let date(spec, modifier) := foreigncall('date', date, {spec, modifier}),
 lineitem
 .filter(l_shipdate <= date('1998-12-01', '-90 days'))
 .groupby({l_returnflag, l_linestatus},

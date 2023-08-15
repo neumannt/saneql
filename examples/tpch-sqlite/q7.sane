@@ -1,5 +1,5 @@
-let date(spec, modifier := '+0 seconds') := funcall('date', date, {spec, modifier}),
-let extractYear(date) := funcall('strftime', text, {'%Y', date})::integer,
+let date(spec, modifier := '+0 seconds') := foreigncall('date', date, {spec, modifier}),
+let extractYear(date) := foreigncall('strftime', text, {'%Y', date})::integer,
 supplier
 .join(lineitem.filter(l_shipdate.between(date('1995-01-01'), date('1996-12-31'))), s_suppkey=l_suppkey)
 .join(orders, o_orderkey=l_orderkey)

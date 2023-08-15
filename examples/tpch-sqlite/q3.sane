@@ -1,4 +1,4 @@
-let date(spec) := funcall('date', date, {spec}),
+let date(spec) := foreigncall('date', date, {spec}),
 customer
 .filter(c_mktsegment = 'BUILDING')
 .join(orders.filter(o_orderdate < date('1995-03-15')), c_custkey = o_custkey)

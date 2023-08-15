@@ -1,4 +1,4 @@
-let extractYear(date) := funcall('strftime', text, {'%Y', date})::integer,
+let extractYear(date) := foreigncall('strftime', text, {'%Y', date})::integer,
 part
 .filter(p_name.like('%green%'))
 .join(lineitem, p_partkey=l_partkey)

@@ -1,4 +1,4 @@
-let date(spec, modifier := '+0 seconds') := funcall('date', date, {spec, modifier}),
+let date(spec, modifier := '+0 seconds') := foreigncall('date', date, {spec, modifier}),
 orders
 .filter(o_orderdate >= date('1993-07-01') && o_orderdate < date('1993-07-01', '+3 months'))
 .join(lineitem.filter(l_commitdate < l_receiptdate), l_orderkey = o_orderkey, type:=exists)

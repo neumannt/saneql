@@ -1,5 +1,5 @@
 let base := '1996-01-01',
-let basedate(add := '+0 seconds') := funcall('date', date, {base, add}),
+let basedate(add := '+0 seconds') := foreigncall('date', date, {base, add}),
 let revenue:=
    lineitem
    .filter(l_shipdate >= basedate() && l_shipdate < basedate('+3 months'))

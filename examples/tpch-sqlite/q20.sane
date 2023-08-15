@@ -1,5 +1,5 @@
 let base := '1994-01-01',
-let basedate(add := '+0 seconds') := funcall('date', date, {base, add}),
+let basedate(add := '+0 seconds') := foreigncall('date', date, {base, add}),
 let qty_per_ps(ps_partkey, ps_suppkey) :=
    lineitem
    .filter(l_partkey = ps_partkey && l_suppkey = ps_suppkey && l_shipdate >= basedate() && l_shipdate < basedate('+1 year'))
