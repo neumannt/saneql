@@ -14,35 +14,30 @@ using namespace saneql;
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
-static void readFile(const string& fileName, ostringstream& output) {
-   ifstream in(fileName);
-   if (!in.is_open()) {
-      cerr << "unable to read " << fileName << endl;
-      exit(1);
-   }
-   output << in.rdbuf();
-}
-//---------------------------------------------------------------------------
-static string readSaneQL(const string& saneqlFile, std::optional<string> dialectFile = {}) {
+static string readFiles(unsigned count, char* files[]) {
    ostringstream output;
-   if (dialectFile) {
-      readFile(*dialectFile, output);
+   for (unsigned i = 0; i != count; i++) {
+      ifstream in(files[i]);
+      if (!in.is_open()) {
+         cerr << "unable to read " << files[i] << endl;
+         exit(1);
+      }
+      output << in.rdbuf();
       output << "\n";
    }
-   readFile(saneqlFile, output);
    return output.str();
 }
 //---------------------------------------------------------------------------
 int main(int argc, char* argv[]) {
    if (argc < 2) {
-      cerr << "usage: " << argv[0] << " file [dialect-file]" << endl;
+      cerr << "usage: " << argv[0] << " file..." << endl;
       return 1;
    }
 
    Schema schema;
    schema.populateSchema();
 
-   string query = readSaneQL(argv[1], argc >= 3 ? std::make_optional(argv[2]) : std::nullopt);
+   string query = readFiles(argc - 1, argv + 1);
    ASTContainer container;
    ast::AST* tree = nullptr;
    try {
