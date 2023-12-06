@@ -1244,7 +1244,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       auto gbs = scope.getGroupByScope();
       if (!gbs) reportError("aggregate '" + name + "' can only be used in group by computations");
 
-      if (args[1] && constBoolArgument(name, "distinct", args[1])) {
+      if ((args.size() > 1) && args[1] && constBoolArgument(name, "distinct", args[1])) {
          op = distinctOp;
       }
 
