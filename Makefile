@@ -6,7 +6,7 @@ src:=parser/ASTBase.cpp parser/SaneQLLexer.cpp infra/Schema.cpp semana/Functions
 gensrc:=$(PREFIX)parser/saneql_parser.cpp
 obj:=$(addprefix $(PREFIX),$(src:.cpp=.o)) $(gensrc:.cpp=.o)
 
-CXXFLAGS:=-std=c++23 -I$(PREFIX) -I. -g -Wall -Wextra
+CXXFLAGS:=-std=c++20 -I$(PREFIX) -I. -g -Wall -Wextra
 
 -include $(addprefix $(PREFIX),$(src:.cpp=.d)) $(gensrc:.cpp=.d)
 
