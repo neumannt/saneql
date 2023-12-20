@@ -147,7 +147,9 @@ class SemanticAnalysis {
       /// Add a new scope, mark it as ambiguous if it already exists
       Scope* addScope(const std::string& name);
       /// Add a binding
-      void addBinding(Scope* scope, const std::string& column, const algebra::IU* iu);
+      void addBinding(Scope* scope, const std::string& column, const algebra::IU* iu, bool toEnd=true);
+      /// Add a binding at the front of the columns list
+      void addBindingAtFront(Scope* scope, const std::string& column, const algebra::IU* iu);
 
       /// Lookup a column
       const algebra::IU* lookup(const std::string& name) const;

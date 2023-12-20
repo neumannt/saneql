@@ -183,7 +183,7 @@ SemanticAnalysis::BindingInfo::Scope* SemanticAnalysis::BindingInfo::addScope(co
    return &(scopes[name]);
 }
 //---------------------------------------------------------------------------
-void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const string& column, const algebra::IU* iu)
+void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const string& column, const algebra::IU* iu, bool toEnd)
 // Add a binding
 {
    if (scope) {
@@ -198,7 +198,13 @@ void SemanticAnalysis::BindingInfo::addBinding(Scope* scope, const string& colum
       e = ambiguousIU;
    else
       e = iu;
-   columns.push_back({column, iu});
+   columns.insert((toEnd ? columns.end() : columns.begin()), 1, {column, iu});
+}
+//---------------------------------------------------------------------------
+void SemanticAnalysis::BindingInfo::addBindingAtFront(Scope* scope, const string& column, const algebra::IU* iu)
+// Add a binding
+{
+   addBinding(scope, column, iu, false);
 }
 //---------------------------------------------------------------------------
 const algebra::IU* SemanticAnalysis::BindingInfo::lookup(const string& name) const
@@ -246,7 +252,7 @@ SemanticAnalysis::BindingInfo::ArgumentInformation SemanticAnalysis::BindingInfo
 void SemanticAnalysis::BindingInfo::join(const BindingInfo& other)
 // Merge after a join
 {
-   columns.insert(columns.end(), other.columns.begin(), other.columns.end());
+   columns.insert(columns.begin(), other.columns.begin(), other.columns.end());
    for (auto& c : other.columnLookup) {
       if (!columnLookup.count(c.first)) {
          columnLookup.insert(c);
@@ -768,10 +774,10 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeMap(ExpressionResult
          name = to_string(scope->columns.size() + 1);
       }
       if (auto iuref = dynamic_cast<algebra::IURef*>(results[slot].value.get())) {
-         resultBinding.addBinding(scope, name, iuref->getIU());
+         resultBinding.addBindingAtFront(scope, name, iuref->getIU());
          results[slot].iu.reset();
       } else {
-         resultBinding.addBinding(scope, name, results[slot].iu.get());
+         resultBinding.addBindingAtFront(scope, name, results[slot].iu.get());
       }
       ++slot;
    }
@@ -869,10 +875,10 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeWindow(ExpressionRes
             name = to_string(scope->columns.size() + 1);
          }
          if (auto iuref = dynamic_cast<algebra::IURef*>(results[slot].value.get())) {
-            resultBinding.addBinding(scope, name, iuref->getIU());
+            resultBinding.addBindingAtFront(scope, name, iuref->getIU());
             results[slot].iu.reset();
          } else {
-            resultBinding.addBinding(scope, name, results[slot].iu.get());
+            resultBinding.addBindingAtFront(scope, name, results[slot].iu.get());
          }
          ++slot;
       }
