@@ -4,6 +4,7 @@
 #include "infra/Schema.hpp"
 #include "semana/Functions.hpp"
 #include <memory>
+#include <vector>
 //---------------------------------------------------------------------------
 // SaneQL
 // (c) 2023 Thomas Neumann
@@ -310,7 +311,14 @@ struct AggregationLike {
       Max,
       Avg,
       AvgDistinct,
-      RowNumber
+      RowNumber,
+      Rank,
+      DenseRank,
+      NTile,
+      Lead,
+      Lag,
+      FirstValue,
+      LastValue
    };
    static_assert(static_cast<unsigned>(Op::AvgDistinct) == static_cast<unsigned>(WindowOp::AvgDistinct));
 
@@ -322,6 +330,8 @@ struct AggregationLike {
       std::unique_ptr<algebra::IU> iu;
       /// The operation
       Op op;
+      /// The parameters
+      std::vector<std::unique_ptr<algebra::Expression>> parameters{};
    };
 };
 //---------------------------------------------------------------------------

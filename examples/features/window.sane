@@ -1,0 +1,9 @@
+nation
+.window({ r_order := row_number(),
+          tile := ntile(2),
+          neighbour1 := lag(n_name),
+          neighbour2 := lead(n_name::text, offset := 2, default := '-') },
+          orderby := n_name,
+          partitionby := n_regionkey)
+.join(region, n_regionkey = r_regionkey)
+.project({ r_name, r_order, n_name, neighbour1, neighbour2, tile })
