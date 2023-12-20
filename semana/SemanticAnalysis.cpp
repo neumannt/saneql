@@ -1262,12 +1262,48 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
 
    // Logic for handling window functions
    auto handleWindow = [&](algebra::Window::Op op) {
+      using enum algebra::Window::Op;
       auto gbs = scope.getGroupByScope();
       if ((!gbs) || (!gbs->isWindow)) reportError("aggregate '" + name + "' can only be used in window computations");
-
       ExpressionResult exp(unique_ptr<algebra::Expression>(), OrderingInfo::defaultOrder());
-      Type resultType = Type::getInteger(); // TODO handle all window operations
-      gbs->aggregations.push_back({move(exp.scalar()), make_unique<algebra::IU>(resultType), static_cast<algebra::GroupBy::Op>(op)});
+      Type resultType = Type::getUnknown();
+      switch (op) {
+         case RowNumber: // ops without arg
+         case Rank:
+         case DenseRank: {
+            resultType = Type::getInteger();
+            break;
+         }
+         case NTile: // ops with arg
+         case Lead:
+         case Lag:
+         case FirstValue:
+         case LastValue: {
+            exp = scalarArgument(gbs->preAggregation, "window", name, args[0]);
+            resultType = exp.scalar()->getType();
+            break;
+         }
+         default: reportError("aggregate '" + name + "' cannot be used in window computations");
+      }
+      if (op == NTile && exp.scalar()->getType().getType() != Type::Integer) reportError("ntile requires an integer argument");
+      algebra::GroupBy::Aggregation result{move(exp.scalar()), make_unique<algebra::IU>(resultType), static_cast<algebra::GroupBy::Op>(op)};
+      if (op == Lead || op == Lag) {
+         if (args[1]) { // 'offset' value for lead/lag
+            auto offsetArg = scalarArgument(gbs->preAggregation, "window", "offset", args[1]);
+            if (offsetArg.scalar()->getType() != Type::getInteger()) reportError("offset value for lead/lag must be an integer");
+            result.parameters.push_back(move(offsetArg.scalar()));
+         } else {
+            result.parameters.push_back(make_unique<algebra::ConstExpression>("1", Type::getInteger())); // default offset
+         }
+         if (args[2]) { // 'default' value for lead/lag
+            auto defaultArg = scalarArgument(gbs->preAggregation, "window", "default", args[2]); // TODO allow implicit type conversion?
+            if (defaultArg.scalar()->getType() != resultType) reportError("default value for lead/lag must have the same type as the lead/lag expression: " + defaultArg.scalar()->getType().getName() + " vs. " + resultType.getName()  );
+            result.parameters.push_back(move(defaultArg.scalar()));
+         } else {
+            result.parameters.push_back(make_unique<algebra::ConstExpression>(nullptr, resultType)); // null
+         }
+      }
+      gbs->aggregations.push_back(move(result));
       return ExpressionResult(make_unique<algebra::IURef>(gbs->aggregations.back().iu.get()), OrderingInfo::defaultOrder());
    };
 
@@ -1359,6 +1395,13 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeCall(const BindingIn
       case Builtin::AggMin: return handleAggregate(algebra::GroupBy::Op::Min, algebra::GroupBy::Op::Min);
       case Builtin::AggMax: return handleAggregate(algebra::GroupBy::Op::Max, algebra::GroupBy::Op::Max);
       case Builtin::WindowRowNumber: return handleWindow(algebra::Window::Op::RowNumber);
+      case Builtin::WindowRank: return handleWindow(algebra::Window::Op::Rank);
+      case Builtin::WindowDenseRank: return handleWindow(algebra::Window::Op::DenseRank);
+      case Builtin::WindowNTile: return handleWindow(algebra::Window::Op::NTile);
+      case Builtin::WindowLead: return handleWindow(algebra::Window::Op::Lead);
+      case Builtin::WindowLag: return handleWindow(algebra::Window::Op::Lag);
+      case Builtin::WindowFirstValue: return handleWindow(algebra::Window::Op::FirstValue);
+      case Builtin::WindowLastValue: return handleWindow(algebra::Window::Op::LastValue);
       case Builtin::Table: return analyzeTableConstruction(scope, args[0]);
       case Builtin::Case: return analyzeCase(scope, args);
       case Builtin::As: {

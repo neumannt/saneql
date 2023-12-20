@@ -71,6 +71,13 @@ const Functions Functions::freeFunctions(nullptr,
                                             {"min", {Builtin::AggMin, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"max", {Builtin::AggMax, {{"value", TypeCategory::Expression}}}}, // aggregate
                                             {"row_number", {Builtin::WindowRowNumber, {}}}, // windw function
+                                            {"rank", {Builtin::WindowRank, {{"value", TypeCategory::Expression }}}}, // windw function
+                                            {"dense_rank", {Builtin::WindowDenseRank, {{"value", TypeCategory::Expression }}}}, // windw function
+                                            {"ntile", {Builtin::WindowNTile, {{"n", TypeCategory::Expression }}}}, // windw function
+                                            {"lead", {Builtin::WindowLead, {{"value", TypeCategory::Expression }, {"offset", TypeCategory::Expression, true}, {"default", TypeCategory::Expression, true}}}}, // windw function
+                                            {"lag", {Builtin::WindowLag, {{"value", TypeCategory::Expression }, {"offset", TypeCategory::Expression, true}, {"default", TypeCategory::Expression, true}}}}, // windw function
+                                            {"first_value", {Builtin::WindowFirstValue, {{"value", TypeCategory::Expression }}}}, // windw function
+                                            {"last_value", {Builtin::WindowLastValue, {{"value", TypeCategory::Expression }}}}, // windw function
                                             {"table", {Builtin::Table, {{"values", TypeCategory::ExpressionList}}}}, // table construction
                                             {"case", {Builtin::Case, {{"cases", TypeCategory::ExpressionList}, {"else", TypeCategory::Expression, true}, {"search", TypeCategory::Scalar, true}}}}, // case expression
                                             {"gensym", {Builtin::Gensym, {{"name", TypeCategory::Symbol, true}}}}, // create a unique symbol

@@ -47,6 +47,13 @@ class Functions {
       AggMin,
       AggMax,
       WindowRowNumber,
+      WindowRank,
+      WindowDenseRank,
+      WindowNTile,
+      WindowLead,
+      WindowLag,
+      WindowFirstValue,
+      WindowLastValue,
       Table,
       ForeignCall
    };
